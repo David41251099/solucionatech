@@ -50,7 +50,7 @@ describe("POST /api/auth/login", () => {
       .post("/api/auth/login")
       .send({ email: "demo@test.com", password: "123456" });
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
     expect(response.body.data.user.email).toBe("demo@test.com");
     expect(response.body.data.token).toBeTypeOf("string");
   });
