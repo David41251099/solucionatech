@@ -1,0 +1,181 @@
+###
+# test-auth.http
+# Archivo para probar endpoints de autenticación
+# Usar con extensión REST Client en VSCode o Thunder Client
+###
+
+@baseUrl = http://localhost:5000
+@token = 
+
+### Health Check
+GET {{baseUrl}}/health
+
+### ============================================
+### REGISTRO DE USUARIOS
+### ============================================
+
+### Registrar Cliente
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Pedro Sánchez",
+  "email": "pedro@cliente.com",
+  "password": "password123",
+  "role": "client"
+}
+
+### Registrar Técnico
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Sofia López",
+  "email": "sofia@tecnico.com",
+  "password": "password123",
+  "role": "technician"
+}
+
+### Error: Email duplicado
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Pedro Sánchez",
+  "email": "pedro@cliente.com",
+  "password": "password123",
+  "role": "client"
+}
+
+### Error: Campos faltantes
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@test.com"
+}
+
+### Error: Email inválido
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "correo-invalido",
+  "password": "password123",
+  "role": "client"
+}
+
+### Error: Contraseña corta
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@test.com",
+  "password": "123",
+  "role": "client"
+}
+
+### Error: Rol inválido
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "test@test.com",
+  "password": "password123",
+  "role": "admin"
+}
+
+### ============================================
+### LOGIN
+### ============================================
+
+### Login Cliente
+# @name loginCliente
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "pedro@cliente.com",
+  "password": "password123"
+}
+
+### Login Técnico
+# @name loginTecnico
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "sofia@tecnico.com",
+  "password": "password123"
+}
+
+### Error: Email no existe
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "noexiste@test.com",
+  "password": "password123"
+}
+
+### Error: Contraseña incorrecta
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "pedro@cliente.com",
+  "password": "wrongpassword"
+}
+
+### Error: Campos faltantes
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "pedro@cliente.com"
+}
+
+### ============================================
+### PERFIL (PROTEGIDO)
+### ============================================
+
+### Obtener Perfil (reemplaza TOKEN_AQUI con el token del login)
+GET {{baseUrl}}/api/auth/profile
+Authorization: Bearer TOKEN_AQUI
+
+### Error: Sin token
+GET {{baseUrl}}/api/auth/profile
+
+### Error: Token inválido
+GET {{baseUrl}}/api/auth/profile
+Authorization: Bearer token_invalido_xyz123
+
+### Error: Formato incorrecto (sin Bearer)
+GET {{baseUrl}}/api/auth/profile
+Authorization: TOKEN_AQUI
+
+### ============================================
+### USUARIOS DE PRUEBA (SEED.SQL)
+### ============================================
+
+### Login Juan (Cliente de seed.sql)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "juan@cliente.com",
+  "password": "password123"
+}
+
+### Login Ana (Técnico de seed.sql)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ana@tecnico.com",
+  "password": "password123"
+}
