@@ -315,6 +315,38 @@ describe('Security critical audit coverage', () => {
       expect(response.body.success).toBe(false);
     });
 
+    it('returns 403 with closed message when sending to resolved ticket', async () => {
+      const token = buildToken('client-1', 'client');
+      query.mockResolvedValueOnce({
+        rows: [buildTicket({ status: 'resolved', technician_id: 'tech-1' })],
+      });
+
+      const response = await request(app)
+        .post(`/api/tickets/${TICKET_ID}/messages`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ message: 'Mensaje fuera de tiempo' });
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('El ticket está cerrado y no permite nuevos mensajes');
+    });
+
+    it('returns 403 with closed message when sending to cancelled ticket', async () => {
+      const token = buildToken('client-1', 'client');
+      query.mockResolvedValueOnce({
+        rows: [buildTicket({ status: 'cancelled', technician_id: null })],
+      });
+
+      const response = await request(app)
+        .post(`/api/tickets/${TICKET_ID}/messages`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ message: 'Mensaje en ticket cancelado' });
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('El ticket está cerrado y no permite nuevos mensajes');
+    });
+
     it('logs unauthorized_chat_attempt when user tries unauthorized chat access', async () => {
       const token = buildToken('tech-2', 'technician');
       const warnSpy = vi.spyOn(logger, 'warn');

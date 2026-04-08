@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import { Paperclip, X } from "lucide-react";
+import { Paperclip, SendHorizontal, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 interface ChatInputProps {
@@ -54,26 +54,28 @@ export function ChatInput({
     };
   }, [selectedFile]);
 
+  const buildPayload = useCallback((): ChatSendPayload => {
+    const data = new FormData();
+    if (value.trim()) data.append("message", value.trim());
+    if (selectedFile) data.append("file", selectedFile);
+
+    return {
+      message: value,
+      file: selectedFile || null,
+      formData: data,
+    };
+  }, [selectedFile, value]);
+
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         if (!disabled) {
-          const payload: ChatSendPayload = {
-            message: value,
-            file: selectedFile || null,
-            formData: (() => {
-              const data = new FormData();
-              if (value.trim()) data.append("message", value.trim());
-              if (selectedFile) data.append("file", selectedFile);
-              return data;
-            })(),
-          };
-          onSend(payload);
+          onSend(buildPayload());
         }
       }
     },
-    [disabled, onSend, value, selectedFile]
+    [buildPayload, disabled, onSend]
   );
 
   const handleClearFile = useCallback(() => {
@@ -112,15 +114,7 @@ export function ChatInput({
         </div>
       )}
 
-      <div className="flex gap-2 items-end">
-        <Textarea
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Escribe un mensaje..."
-          className="min-h-[44px] resize-none"
-          disabled={disabled}
-        />
+      <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
         <input
           ref={inputRef}
           id={inputId}
@@ -130,34 +124,37 @@ export function ChatInput({
           disabled={disabled}
           className="sr-only"
         />
+
         <Tooltip>
           <TooltipTrigger asChild>
             <label
               htmlFor={inputId}
-              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-border bg-white text-slate-600 shadow-sm transition hover:bg-slate-100"
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100"
               aria-label="Adjuntar archivo"
             >
-              <Paperclip className="h-5 w-5" />
+              <Paperclip className="h-4.5 w-4.5" />
             </label>
           </TooltipTrigger>
           <TooltipContent side="top">Adjuntar archivo</TooltipContent>
         </Tooltip>
+
+        <Textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Escribe un mensaje..."
+          className="min-h-[40px] flex-1 resize-none border-0 bg-transparent px-2 py-2 shadow-none focus-visible:ring-0"
+          disabled={disabled}
+        />
+
         <Button
-          onClick={() =>
-            onSend({
-              message: value,
-              file: selectedFile || null,
-              formData: (() => {
-                const data = new FormData();
-                if (value.trim()) data.append("message", value.trim());
-                if (selectedFile) data.append("file", selectedFile);
-                return data;
-              })(),
-            })
-          }
+          onClick={() => onSend(buildPayload())}
           disabled={disabled || isSending}
+          size="icon"
+          className="h-10 w-10 rounded-full bg-blue-600 text-white hover:bg-blue-700"
+          aria-label="Enviar mensaje"
         >
-          {isSending ? "Enviando..." : "Enviar"}
+          {isSending ? "..." : <SendHorizontal className="h-4.5 w-4.5" />}
         </Button>
       </div>
     </div>

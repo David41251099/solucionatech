@@ -1,8 +1,7 @@
 import { query } from '../config/database.js';
 import { logger } from '../config/logger.js';
 import AppError from '../utils/AppError.js';
-
-const WRITABLE_CHAT_STATUSES = new Set(['assigned', 'in_progress']);
+import { CLOSED_CHAT_STATUSES, WRITABLE_CHAT_STATUSES } from '../utils/ticketChat.js';
 
 const getRequestLogContext = (req, extra = {}) => ({
   requestId: req.context?.requestId ?? req.requestId ?? null,
@@ -56,6 +55,20 @@ export const ensureTicketMessageAccessBeforeUpload = async (req, res, next) => {
     }
 
     const ticket = ticketResult.rows[0];
+    if (CLOSED_CHAT_STATUSES.has(ticket.status)) {
+      logger.warn(
+        {
+          ...getRequestLogContext(req, {
+            action: 'chat_blocked_ticket_closed',
+            role,
+            status: ticket.status,
+          }),
+        },
+        'Intento de chat bloqueado por ticket cerrado'
+      );
+      return next(new AppError('El ticket está cerrado y no permite nuevos mensajes', 403));
+    }
+
     const canInteract = canUserInteractWithTicket(userId, ticket);
     if (!canInteract) {
       logger.warn(

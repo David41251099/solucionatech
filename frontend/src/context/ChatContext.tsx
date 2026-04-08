@@ -27,6 +27,8 @@ export type ChatState = {
   selectedTicketId: string | null;
   tickets: Ticket[];
   messages: Record<string, Message[]>;
+  unreadCounts: Record<string, number>;
+  totalUnread: number;
 };
 
 type SendMessagePayload = {
@@ -49,12 +51,70 @@ type ChatContextValue = ChatState & {
   setIsOpen: (value: boolean) => void;
   toggleOpen: () => void;
   selectTicket: (ticketId: string | null) => void;
+  incrementUnread: (ticketId: string, senderId?: string | null) => void;
+  resetUnread: (ticketId: string | null) => void;
+  calculateTotalUnread: () => number;
   refreshTickets: () => Promise<void>;
   refreshMessages: (ticketId: string) => Promise<void>;
   sendMessage: (payload: SendMessagePayload) => Promise<void>;
 };
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
+const CHAT_UNREAD_STORAGE_KEY = "chat_unread";
+const calculateUnreadTotal = (counts: Record<string, number>) =>
+  Object.values(counts).reduce((sum, count) => sum + (Number.isFinite(count) ? count : 0), 0);
+const normalizeId = (value: unknown) => {
+  if (value === null || value === undefined) return null;
+  const stringValue = String(value).trim();
+  return stringValue.length > 0 ? stringValue : null;
+};
+const toShortId = (value: unknown) => {
+  const normalized = normalizeId(value);
+  return normalized ? normalized.slice(0, 8) : null;
+};
+const getInitialUnread = () => {
+  try {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return { unreadCounts: {}, totalUnread: 0 };
+    }
+
+    const stored = window.localStorage.getItem(CHAT_UNREAD_STORAGE_KEY);
+    if (!stored) {
+      return { unreadCounts: {}, totalUnread: 0 };
+    }
+
+    const parsed = JSON.parse(stored) as {
+      unreadCounts?: Record<string, unknown>;
+      totalUnread?: unknown;
+    };
+
+    const unreadCounts = Object.entries(parsed?.unreadCounts ?? {}).reduce<Record<string, number>>(
+      (acc, [ticketId, value]) => {
+        const normalizedTicketId = normalizeId(ticketId);
+        const count = Number(value);
+        if (!normalizedTicketId || !Number.isFinite(count) || count <= 0) {
+          return acc;
+        }
+        acc[normalizedTicketId] = Math.floor(count);
+        return acc;
+      },
+      {}
+    );
+
+    const computedTotalUnread = calculateUnreadTotal(unreadCounts);
+    const storedTotalUnread = Number(parsed?.totalUnread);
+    const totalUnread = Number.isFinite(storedTotalUnread) && storedTotalUnread >= 0
+      ? Math.floor(storedTotalUnread)
+      : computedTotalUnread;
+
+    return {
+      unreadCounts,
+      totalUnread: totalUnread > 0 ? totalUnread : computedTotalUnread,
+    };
+  } catch {
+    return { unreadCounts: {}, totalUnread: 0 };
+  }
+};
 
 const sortByDateAsc = (items: Message[]) =>
   [...items].sort(
@@ -62,18 +122,25 @@ const sortByDateAsc = (items: Message[]) =>
   );
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
-  const [state, setState] = useState<ChatState>({
-    isOpen: false,
-    selectedTicketId: null,
-    tickets: [],
-    messages: {},
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const [state, setState] = useState<ChatState>(() => {
+    const initialUnread = getInitialUnread();
+    return {
+      isOpen: false,
+      selectedTicketId: null,
+      tickets: [],
+      messages: {},
+      unreadCounts: initialUnread.unreadCounts,
+      totalUnread: initialUnread.totalUnread,
+    };
   });
   const [isLoadingTickets, setIsLoadingTickets] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const activeTicketRef = useRef<string | null>(null);
+  const processedRealtimeMessageIdsRef = useRef<Set<string>>(new Set());
+  const joinedTicketRoomsRef = useRef<Set<string>>(new Set());
 
   const appendMessageIfMissing = useCallback((message: Message) => {
     if (!message?.id || !message?.ticket_id) return;
@@ -107,8 +174,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const filtered =
         user.role === "client"
           ? tickets.filter(
-              (ticket) => ticket.client_id === user.id && ticket.status !== "pending"
-            )
+            (ticket) => ticket.client_id === user.id && ticket.status !== "pending"
+          )
           : tickets.filter((ticket) => ticket.technician_id === user.id);
 
       setState((prev) => {
@@ -152,14 +219,118 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const selectTicket = useCallback((ticketId: string | null) => {
     if (ticketId !== null && (typeof ticketId !== "string" || !ticketId.trim())) {
-      devWarn("Ticket inválido en selectTicket:", ticketId);
+      devWarn("Ticket invalido en selectTicket:", ticketId);
       return;
     }
 
-    devLog("SETTING selectedTicketId:", ticketId);
+    const ticketIdNorm = normalizeId(ticketId);
+    devLog("SETTING selectedTicketId:", ticketIdNorm);
     setError(null);
-    setState((prev) => ({ ...prev, selectedTicketId: ticketId }));
+    setState((prev) => {
+      if (!ticketIdNorm) {
+        return { ...prev, selectedTicketId: null };
+      }
+
+      const currentUnread = prev.unreadCounts[ticketIdNorm] ?? 0;
+      if (currentUnread <= 0) {
+        return { ...prev, selectedTicketId: ticketIdNorm };
+      }
+
+      const unreadCounts = { ...prev.unreadCounts, [ticketIdNorm]: 0 };
+      return {
+        ...prev,
+        selectedTicketId: ticketIdNorm,
+        unreadCounts,
+        totalUnread: calculateUnreadTotal(unreadCounts),
+      };
+    });
   }, []);
+
+  const incrementUnread = useCallback(
+    (ticketId: string, senderId?: string | null) => {
+      const ticketIdNorm = normalizeId(ticketId);
+      const senderIdNorm = normalizeId(senderId);
+      const currentUserIdNorm = normalizeId(user?.id ?? (user as { userId?: string | null } | null)?.userId ?? null);
+      if (!ticketIdNorm || !currentUserIdNorm) return;
+      if (senderIdNorm && senderIdNorm === currentUserIdNorm) return;
+
+      setState((prev) => {
+        devLog("UNREAD BEFORE INCREMENT", {
+          ticketId: ticketIdNorm,
+          activeTicketId: normalizeId(prev.selectedTicketId),
+          prevUnread: prev.unreadCounts[ticketIdNorm] ?? 0,
+          prevTotalUnread: prev.totalUnread,
+        });
+
+        const unreadCounts = {
+          ...prev.unreadCounts,
+          [ticketIdNorm]: (prev.unreadCounts[ticketIdNorm] ?? 0) + 1,
+        };
+        const nextTotalUnread = calculateUnreadTotal(unreadCounts);
+
+        devLog("UNREAD AFTER INCREMENT", {
+          ticketId: ticketIdNorm,
+          nextUnread: unreadCounts[ticketIdNorm],
+          nextTotalUnread,
+        });
+
+        return {
+          ...prev,
+          unreadCounts,
+          totalUnread: nextTotalUnread,
+        };
+      });
+    },
+    [user]
+  );
+
+  const resetUnread = useCallback((ticketId: string | null) => {
+    const ticketIdNorm = normalizeId(ticketId);
+    if (!ticketIdNorm) return;
+
+    setState((prev) => {
+      const currentUnread = prev.unreadCounts[ticketIdNorm] ?? 0;
+      if (currentUnread <= 0) {
+        return prev;
+      }
+
+      const unreadCounts = { ...prev.unreadCounts, [ticketIdNorm]: 0 };
+      return {
+        ...prev,
+        unreadCounts,
+        totalUnread: calculateUnreadTotal(unreadCounts),
+      };
+    });
+  }, []);
+
+  const calculateTotalUnread = useCallback(() => {
+    return calculateUnreadTotal(state.unreadCounts);
+  }, [state.unreadCounts]);
+
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined" || !window.localStorage) return;
+
+      if (isAuthLoading) {
+        return;
+      }
+
+      if (!isAuthenticated) {
+        window.localStorage.removeItem(CHAT_UNREAD_STORAGE_KEY);
+        return;
+      }
+
+      window.localStorage.setItem(
+        CHAT_UNREAD_STORAGE_KEY,
+        JSON.stringify({
+          unreadCounts: state.unreadCounts,
+          totalUnread: state.totalUnread,
+        })
+      );
+    } catch {
+      // noop: no bloquear UI si falla localStorage
+    }
+  }, [isAuthLoading, isAuthenticated, state.unreadCounts, state.totalUnread]);
 
   const sendMessage = useCallback(
     async ({ message, file, formData }: SendMessagePayload) => {
@@ -219,18 +390,73 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    if (isAuthLoading) {
+      return;
+    }
+
     if (!isAuthenticated) {
       setState({
         isOpen: false,
         selectedTicketId: null,
         tickets: [],
         messages: {},
+        unreadCounts: {},
+        totalUnread: 0,
       });
       return;
     }
 
     refreshTickets();
-  }, [isAuthenticated, refreshTickets]);
+  }, [isAuthLoading, isAuthenticated, refreshTickets]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      joinedTicketRoomsRef.current.clear();
+      return;
+    }
+
+    const nextTicketIds = new Set(
+      state.tickets
+        .map((ticket) => normalizeId(ticket.id))
+        .filter((id): id is string => Boolean(id))
+    );
+
+    const joinedTicketIds = joinedTicketRoomsRef.current;
+
+    nextTicketIds.forEach((ticketId) => {
+      if (joinedTicketIds.has(ticketId)) return;
+
+      socket.emit(SOCKET_EVENTS.TICKET_JOIN, { ticketId }, (ack?: SocketAck) => {
+        if (ack && ack.success === false) {
+          devWarn("ticket:join rechazado en sync de rooms:", { ticketId, reason: ack.message });
+          return;
+        }
+        joinedTicketIds.add(ticketId);
+      });
+    });
+
+    [...joinedTicketIds].forEach((ticketId) => {
+      if (nextTicketIds.has(ticketId)) return;
+
+      socket.emit(SOCKET_EVENTS.TICKET_LEAVE, { ticketId }, (ack?: SocketAck) => {
+        if (ack && ack.success === false) {
+          devWarn("ticket:leave rechazado en sync de rooms:", { ticketId, reason: ack.message });
+          return;
+        }
+        joinedTicketIds.delete(ticketId);
+      });
+    });
+  }, [isAuthenticated, state.tickets]);
+
+  useEffect(() => {
+    return () => {
+      const joinedTicketIds = [...joinedTicketRoomsRef.current];
+      joinedTicketIds.forEach((ticketId) => {
+        socket.emit(SOCKET_EVENTS.TICKET_LEAVE, { ticketId });
+      });
+      joinedTicketRoomsRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     const selectedTicketId = state.selectedTicketId;
@@ -309,16 +535,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         activeTicketRef.current = null;
         return;
       }
-      devLog("Rejoin automático:", activeTicketId);
+      devLog("Rejoin automatico:", activeTicketId);
 
       socket.emit(
         SOCKET_EVENTS.TICKET_JOIN,
         { ticketId: activeTicketId },
         (ack?: SocketAck) => {
           if (ack && ack.success === false) {
-            devWarn("Rejoin falló:", ack.message);
+            devWarn("Rejoin fallo:", ack.message);
             activeTicketRef.current = null;
-            setError(ack.message || "No se pudo restablecer el chat tras reconexión.");
+            setError(ack.message || "No se pudo restablecer el chat tras reconexion.");
           }
         }
       );
@@ -331,18 +557,116 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [state.selectedTicketId, state.tickets]);
 
   useEffect(() => {
-    const handleMessageNew = (message: Message) => {
+    const handleMessageNew = (message: Message | { message?: Message } | { data?: { message?: Message } } | Message[]) => {
+      const incomingArray = Array.isArray(message) ? message : null;
+      const incomingEnvelope = (!incomingArray ? message : null) as { message?: Message; data?: { message?: Message } };
+      const rawMessage = ((): Message | null => {
+        if (incomingArray && incomingArray.length > 0) {
+          return incomingArray[0] as Message;
+        }
+        if (incomingEnvelope?.data?.message && typeof incomingEnvelope.data.message === "object") {
+          return incomingEnvelope.data.message;
+        }
+        if (incomingEnvelope?.message && typeof incomingEnvelope.message === "object") {
+          return incomingEnvelope.message;
+        }
+        if (message && typeof message === "object") {
+          return message as Message;
+        }
+        return null;
+      })();
+      if (!rawMessage) {
+        return;
+      }
+      const normalizedSocketMessage = rawMessage as Message & {
+        ticketId?: string | number | null;
+        senderId?: string | number | null;
+        userId?: string | number | null;
+      };
+      const incomingTicketId = normalizedSocketMessage.ticket_id ?? normalizedSocketMessage.ticketId;
+      const senderId =
+        normalizedSocketMessage.senderId ??
+        normalizedSocketMessage.userId ??
+        normalizedSocketMessage.sender_id;
+      const activeTicketId = state.selectedTicketId;
+      const currentUserId = user?.id ?? (user as { userId?: string | null } | null)?.userId ?? null;
+
+      const incomingTicketIdNorm = normalizeId(incomingTicketId);
+      const activeTicketIdNorm = normalizeId(activeTicketId);
+      const senderIdNorm = normalizeId(senderId);
+      const currentUserIdNorm = normalizeId(currentUserId);
+      const messageIdNorm = normalizeId(rawMessage?.id);
+      const incomingShortId = toShortId(incomingTicketIdNorm);
+      const matchedByFullId = state.tickets.find(
+        (ticket) => normalizeId(ticket.id) === incomingTicketIdNorm
+      );
+      const matchedByShortId =
+        !matchedByFullId && incomingShortId
+          ? state.tickets.find((ticket) => toShortId(ticket.id) === incomingShortId)
+          : null;
+      const matchedTicketId = matchedByFullId?.id ?? matchedByShortId?.id ?? incomingTicketIdNorm;
+      const matchedTicketIdNorm = normalizeId(matchedTicketId);
+
+      const isOwnMessage = senderIdNorm === currentUserIdNorm;
+      const isActiveTicket = matchedTicketIdNorm === activeTicketIdNorm && state.isOpen;
+
+      devLog("UNREAD ID COMPARE", {
+        rawIncomingTicketId: incomingTicketId,
+        normalizedIncomingTicketId: incomingTicketIdNorm,
+        matchedTicketId,
+        matchedTicketIdNorm,
+        rawActiveTicketId: activeTicketId,
+        normalizedActiveTicketId: activeTicketIdNorm,
+      });
+
+      devLog("UNREAD DEBUG", {
+        incomingTicketId: incomingTicketIdNorm,
+        activeTicketId: activeTicketIdNorm,
+        isChatOpen: state.isOpen,
+        senderId: senderIdNorm,
+        currentUserId: currentUserIdNorm,
+        isOwnMessage,
+        isActiveTicket,
+        willIncrement: !isOwnMessage && !isActiveTicket,
+      });
+
+      if (!incomingTicketIdNorm) {
+        return;
+      }
+
+      if (messageIdNorm && processedRealtimeMessageIdsRef.current.has(messageIdNorm)) {
+        return;
+      }
+      if (messageIdNorm) {
+        processedRealtimeMessageIdsRef.current.add(messageIdNorm);
+      }
+
       setState((prev) => {
-        const current = prev.messages[message.ticket_id] ?? [];
-        if (current.some((item) => item.id === message.id)) return prev;
+        const key = matchedTicketIdNorm || incomingTicketIdNorm;
+        if (!key) return prev;
+        const current = prev.messages[key] ?? [];
+        if (current.some((item) => item.id === rawMessage?.id)) return prev;
+
+        const normalizedMessage = {
+          ...rawMessage,
+          ticket_id: key,
+          sender_id: senderIdNorm ?? rawMessage?.sender_id ?? null,
+        };
+
         return {
           ...prev,
           messages: {
             ...prev.messages,
-            [message.ticket_id]: sortByDateAsc([...current, message]),
+            [key]: sortByDateAsc([...current, normalizedMessage]),
           },
         };
       });
+
+      if (isOwnMessage) return;
+      if (isActiveTicket) return;
+
+      if (!matchedTicketIdNorm) return;
+      incrementUnread(matchedTicketIdNorm, senderIdNorm);
     };
 
     const handleTicketUpdated = () => {
@@ -364,7 +688,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       socket.off("ticketReleased", handleTicketUpdated);
       socket.off("ticketCancelled", handleTicketUpdated);
     };
-  }, [refreshTickets]);
+  }, [incrementUnread, refreshTickets, state.isOpen, state.selectedTicketId, state.tickets, user]);
 
   const value = useMemo<ChatContextValue>(
     () => ({
@@ -380,6 +704,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           isOpen: !prev.isOpen,
         })),
       selectTicket,
+      incrementUnread,
+      resetUnread,
+      calculateTotalUnread,
       refreshTickets,
       refreshMessages,
       sendMessage,
@@ -391,6 +718,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       isSending,
       error,
       selectTicket,
+      incrementUnread,
+      resetUnread,
+      calculateTotalUnread,
       refreshTickets,
       refreshMessages,
       sendMessage,

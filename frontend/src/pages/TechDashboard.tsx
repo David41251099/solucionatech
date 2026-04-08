@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ClipboardList, History, Inbox } from "lucide-react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCircle2, ClipboardList, Clock3, History, Inbox, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { assignTicket, getAvailableTickets, getMyTickets } from "../services/ticket.service";
 import { socket } from "../socket/socket";
 import { useAuth } from "@/hooks/useAuth";
 import type { Ticket } from "../types";
-import { DashboardTabs } from "../components/dashboard/DashboardTabs";
 import { TicketList } from "../components/dashboard/TicketList";
 import { HistoryList } from "../components/dashboard/HistoryList";
+import { DashboardTabs } from "../components/dashboard/DashboardTabs";
 import { Header } from "../components/Header";
 import { Button } from "../components/ui/button";
+import { StatCard } from "../components/dashboard/StatCard";
+import { SectionContainer } from "../components/dashboard/SectionContainer";
 import { devLog, devWarn } from "../utils/devLog";
 
 export function TechDashboard() {
@@ -99,7 +101,7 @@ export function TechDashboard() {
 
   useEffect(() => {
     const handleReconnect = async () => {
-      devLog("Dashboard re-fetch tras reconexión");
+      devLog("Dashboard re-fetch tras reconexion");
       setError(null);
       setHistoryOffset(0);
       const results = await Promise.allSettled([
@@ -161,7 +163,7 @@ export function TechDashboard() {
       if (ticket.technician_id !== currentUserId) return;
       if (actorId && actorId === currentUserId) return;
 
-      toast("El cliente canceló un ticket asignado.");
+      toast("El cliente cancelo un ticket asignado.");
     };
 
     socket.on("ticket:new", handleNew);
@@ -196,10 +198,15 @@ export function TechDashboard() {
     [myTickets]
   );
 
+  const inProgressCount = useMemo(
+    () => myTickets.filter((ticket) => ticket.status === "in_progress").length,
+    [myTickets]
+  );
+
   const tabs = useMemo(
     () => [
       { id: "available", label: "Disponibles", icon: <Inbox className="h-5 w-5" /> },
-      { id: "my", label: `Mis Tickets (${myActiveTickets.length})`, icon: <ClipboardList className="h-5 w-5" /> },
+      { id: "my", label: `Mis tickets (${myActiveTickets.length})`, icon: <ClipboardList className="h-5 w-5" /> },
       { id: "history", label: "Historial", icon: <History className="h-5 w-5" /> },
     ],
     [myActiveTickets.length]
@@ -232,69 +239,104 @@ export function TechDashboard() {
       <Header showLogout />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Panel del Técnico</h1>
-          <p className="mt-1 text-sm text-slate-500">Revisa solicitudes pendientes y tu historial de soporte.</p>
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard</h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Monitorea tickets asignados, progreso de soporte y disponibilidad en tiempo real.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-lg"
+            onClick={() => setActiveTab("available")}
+          >
+            Ver disponibles
+          </Button>
         </div>
+
+        <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Tickets asignados" value={myActiveTickets.length} icon={<ClipboardList className="h-4 w-4" />} tone="blue" />
+          <StatCard label="En proceso" value={inProgressCount} icon={<LoaderCircle className="h-4 w-4" />} tone="orange" />
+          <StatCard label="Disponibles" value={available.length} icon={<Inbox className="h-4 w-4" />} tone="amber" />
+          <StatCard label="Resueltos" value={historyTickets.filter((t) => t.status === "resolved").length} icon={<CheckCircle2 className="h-4 w-4" />} tone="green" />
+        </section>
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <DashboardTabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as "available" | "my" | "history")} />
-          <div className="text-sm text-slate-500">
-            {activeTab === "available"
-              ? `${available.length} disponibles`
-              : activeTab === "my"
-              ? `${myActiveTickets.length} activos`
-              : `${historyTickets.length} cerradas`}
-          </div>
+          <p className="text-sm text-slate-500">
+            {activeTab === "available" && `${available.length} disponibles`}
+            {activeTab === "my" && `${myActiveTickets.length} activos`}
+            {activeTab === "history" && `${historyTickets.length} en historial`}
+          </p>
         </div>
 
-        {activeTab === "available" ? (
-          <TicketList
-            tickets={available}
-            isLoading={isLoading}
-            error={error}
-            emptyTitle="No hay tickets disponibles"
-            emptyDescription="Vuelve más tarde para nuevas solicitudes"
-            onTakeTicket={handleTakeTicket}
-            takingId={isTakingId}
-            viewerRole="technician"
-          />
-        ) : activeTab === "my" ? (
-          <TicketList
-            tickets={myActiveTickets}
-            isLoading={isLoading}
-            error={error}
-            emptyTitle="No tienes tickets asignados"
-            emptyDescription="Los tickets en progreso aparecerán aquí"
-            showViewDetails
-            viewerRole="technician"
-          />
-        ) : (
-          <HistoryList
-            tickets={historyTickets}
-            isLoading={isLoading}
-            error={error}
-            emptyTitle="Aún no tienes historial"
-            emptyDescription="Tus tickets resueltos o cancelados aparecerán aquí"
-            viewerRole="technician"
-            footer={
-              <div className="space-y-3">
-                {historyHasMore && (
-                  <div className="flex justify-center">
-                    <Button type="button" variant="outline" onClick={handleLoadMoreHistory} disabled={isLoadingMoreHistory}>
-                      {isLoadingMoreHistory ? "Cargando..." : "Ver más"}
-                    </Button>
-                  </div>
-                )}
-                {!historyHasMore && historyTickets.length > 0 && (
-                  <p className="text-center text-sm text-slate-500">No hay más resultados.</p>
-                )}
-              </div>
-            }
-          />
+        {activeTab === "available" && (
+          <SectionContainer
+            title="Tickets disponibles"
+            subtitle="Solicitudes pendientes que puedes tomar ahora."
+          >
+            <TicketList
+              tickets={available}
+              isLoading={isLoading}
+              error={error}
+              emptyTitle="No hay tickets disponibles"
+              emptyDescription="Vuelve mas tarde para nuevas solicitudes."
+              onTakeTicket={handleTakeTicket}
+              takingId={isTakingId}
+              viewerRole="technician"
+            />
+          </SectionContainer>
+        )}
+
+        {activeTab === "my" && (
+          <SectionContainer
+            title="Tickets activos"
+            subtitle="Tickets asignados al tecnico autenticado."
+          >
+            <TicketList
+              tickets={myActiveTickets}
+              isLoading={isLoading}
+              error={error}
+              emptyTitle="No tienes tickets asignados"
+              emptyDescription="Cuando tomes un ticket, aparecera en esta seccion."
+              showViewDetails
+              viewerRole="technician"
+            />
+          </SectionContainer>
+        )}
+
+        {activeTab === "history" && (
+          <SectionContainer
+            title="Historial"
+            subtitle="Tickets cerrados por tu cuenta."
+          >
+            <HistoryList
+              tickets={historyTickets}
+              isLoading={isLoading}
+              error={error}
+              emptyTitle="Aun no tienes historial"
+              emptyDescription="Los tickets resueltos o cancelados apareceran aqui."
+              viewerRole="technician"
+              footer={
+                <div className="space-y-3">
+                  {historyHasMore && (
+                    <div className="flex justify-center">
+                      <Button type="button" variant="outline" onClick={handleLoadMoreHistory} disabled={isLoadingMoreHistory}>
+                        {isLoadingMoreHistory ? "Cargando..." : "Ver mas"}
+                      </Button>
+                    </div>
+                  )}
+                  {!historyHasMore && historyTickets.length > 0 && (
+                    <p className="text-center text-sm text-slate-500">No hay mas resultados.</p>
+                  )}
+                </div>
+              }
+            />
+          </SectionContainer>
         )}
       </main>
     </div>
   );
 }
-

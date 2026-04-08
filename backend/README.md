@@ -1,47 +1,101 @@
-﻿# SolucionaTech Backend
+# SolucionaTech Backend
 
-Backend de SolucionaTech (tickets + chat en tiempo real + autenticacion JWT).
+## Proposito
 
-## Tecnologias
-- Node.js + Express
-- PostgreSQL
-- JWT
-- Socket.IO
+El backend expone la API REST y la capa Socket.IO que soportan autenticacion, tickets, chat en tiempo real y carga de archivos. La implementacion preserva contratos estables hacia el frontend mediante respuestas con `success`, `data` y `message`, ademas de algunos campos legacy de compatibilidad controlada.
 
-## Instalacion
-```bash
-npm install
-npm run dev
+## Arquitectura
+
+```text
+backend/
+|-- server.js
+|-- src/
+|   |-- app.js
+|   |-- config/
+|   |-- controllers/
+|   |-- middleware/
+|   |-- routes/
+|   |-- socket/
+|   |-- utils/
+|   `-- database/
+`-- tests/
 ```
 
-Servidor por defecto: `http://localhost:5000`
+### Capas principales
 
-## Variables de entorno
-```env
-PORT=5000
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=solucionatech
-DB_USER=postgres
-DB_PASSWORD=postgres
-JWT_SECRET=tu_secreto
-JWT_EXPIRES_IN=7d
-FRONTEND_URL=http://localhost:5173
-```
+- `server.js`: carga variables de entorno, crea el servidor HTTP e inicializa Socket.IO.
+- `src/app.js`: configura middlewares globales, CORS, rate limiting, rutas y manejo de errores.
+- `src/routes`: declara endpoints y middlewares por recurso.
+- `src/controllers`: procesa request/response y coordina acceso a base de datos.
+- `src/middleware`: autenticacion, autorizacion, control de acceso a tickets, uploads y errores.
+- `src/socket`: define autenticacion de sockets, salas por ticket y eventos en tiempo real.
+- `src/utils`: respuestas HTTP, errores tipados y utilidades compartidas.
+
+## Flujo de tickets
+
+### Estados soportados
+
+- `pending`
+- `assigned`
+- `in_progress`
+- `resolved`
+- `cancelled`
+
+### Reglas operativas
+
+- Un ticket nuevo se crea en `pending`.
+- Un ticket en `pending` no puede tener `technician_id`.
+- Un ticket en `assigned` o `in_progress` debe tener `technician_id`.
+- El tecnico autenticado toma el ticket mediante `PATCH /api/tickets/:id/assign`.
+- El tecnico asignado puede avanzar de `assigned` a `in_progress`.
+- El tecnico asignado puede avanzar de `in_progress` a `resolved`.
+- El cliente propietario puede cancelar un ticket no finalizado.
+- El tecnico asignado puede liberar un ticket en `assigned` o `in_progress`, devolviendolo a `pending`.
+
+## Seguridad implementada
+
+### Acceso y ownership
+
+- JWT obligatorio en rutas protegidas.
+- `verifyToken` resuelve `userId` y `role` desde el token.
+- Los clientes solo pueden ver y cancelar sus propios tickets.
+- Los tecnicos solo pueden modificar tickets asignados a ellos, salvo la toma inicial de tickets `pending`.
+- El chat solo permite escritura cuando el ticket esta en `assigned` o `in_progress` y el usuario pertenece al ticket.
+
+### Uploads seguros
+
+- El endpoint `/api/upload` requiere autenticacion.
+- Se aceptan imagenes con extensiones `.jpg`, `.jpeg`, `.png` y `.webp`.
+- El backend valida magic bytes para evitar archivos con contenido inconsistente.
+- Se bloquean extensiones peligrosas y patrones de doble extension.
+- El limite de tamano por archivo es 5 MB.
+
+### Protecciones globales
+
+- `helmet` para cabeceras de seguridad.
+- `express-rate-limit` para reducir abuso de endpoints.
+- CORS restringido por `FRONTEND_URL`.
+- Logging estructurado con `pino`.
 
 ## Endpoints principales
 
-### Auth
+### Autenticacion
+
 - `POST /api/auth/register`
 - `POST /api/auth/login`
-- `GET /api/auth/me` (protegido)
-- `GET /api/auth/profile` (alias legacy)
+- `GET /api/auth/me`
+- `GET /api/auth/profile`
+
+`/api/auth/profile` se mantiene como alias de compatibilidad.
 
 ### Tickets
+
 - `POST /api/tickets`
 - `GET /api/tickets`
+- `GET /api/tickets/available`
 - `GET /api/tickets/my-tickets`
 - `GET /api/tickets/:id`
+- `PUT /api/tickets/:id`
 - `PATCH /api/tickets/:id/assign`
 - `PATCH /api/tickets/:id/status`
 - `PATCH /api/tickets/:id/cancel`
@@ -49,49 +103,72 @@ FRONTEND_URL=http://localhost:5173
 - `GET /api/tickets/:id/messages`
 - `POST /api/tickets/:id/messages`
 
-### Upload
+### Uploads
+
 - `POST /api/upload`
 
-## Formato de respuesta estandar
+### Salud del servicio
+
+- `GET /health`
+
+## Formato de respuesta
 
 ### Exito
+
 ```json
 {
   "success": true,
-  "message": "Operacion exitosa",
-  "data": {}
+  "data": {},
+  "message": "Operacion exitosa"
 }
 ```
 
 ### Error
+
 ```json
 {
   "success": false,
-  "message": "Error descriptivo",
-  "error": "Error descriptivo"
+  "data": null,
+  "message": "Descripcion del error",
+  "error": "Descripcion del error"
 }
 ```
 
-Nota: algunos endpoints mantienen campos legacy (`ticket`, `tickets`, `user`, `token`) para compatibilidad con frontend existente.
+## Variables de entorno
 
-## Seguridad
-- Helmet y rate-limit globales.
-- JWT obligatorio en rutas protegidas.
-- Socket.IO con autenticacion por token en handshake.
-- Validacion de acceso a ticket en eventos `ticket:join` y `message:send`.
+```env
+PORT=5000
+NODE_ENV=development
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=solucionatech
+DB_USER=postgres
+DB_PASSWORD=postgres
+JWT_SECRET=definir_un_valor_seguro
+JWT_EXPIRES_IN=7d
+FRONTEND_URL=http://localhost:5173
+LOG_LEVEL=info
+```
 
-## Esquema relevante
+## Ejecucion local
 
-### `tickets`
-- `id`
-- `title`
-- `description`
-- `status`
-- `category` (`general|hardware|software|network`)
-- `attachment_url`
-- `client_id`
-- `technician_id`
-- `created_at`
-- `updated_at`
+```bash
+npm install
+npm run dev
+```
 
-`priority` fue retirado del flujo actual.
+Para ejecutar pruebas:
+
+```bash
+npm run test:run
+```
+
+## Base de datos
+
+El esquema principal se encuentra en `src/database/schema.sql`. Las entidades relevantes son:
+
+- `users`
+- `tickets`
+- `ticket_messages`
+
+El esquema aplica una migracion segura que elimina `priority` si todavia existe, incorpora `category` y refuerza restricciones de consistencia sobre estados.

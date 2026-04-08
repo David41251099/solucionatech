@@ -1,17 +1,21 @@
-export const devLog = (...args: unknown[]) => {
-  if (import.meta.env.DEV) {
-    console.log(...args);
+const shouldWriteDevLogs = import.meta.env.DEV && import.meta.env.MODE !== "test";
+
+const writeDevLog = (method: "log" | "warn" | "error", ...args: unknown[]) => {
+  if (!shouldWriteDevLogs) {
+    return;
   }
+
+  console[method](...args);
+};
+
+export const devLog = (...args: unknown[]) => {
+  writeDevLog("log", ...args);
 };
 
 export const devWarn = (...args: unknown[]) => {
-  if (import.meta.env.DEV) {
-    console.warn(...args);
-  }
+  writeDevLog("warn", ...args);
 };
 
 export const devError = (...args: unknown[]) => {
-  if (import.meta.env.DEV) {
-    console.error(...args);
-  }
+  writeDevLog("error", ...args);
 };

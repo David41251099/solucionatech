@@ -8,7 +8,7 @@ import { devLog } from "../utils/devLog";
 
 export function TicketChatPage() {
   const { id } = useParams();
-  const { selectTicket, selectedTicketId, refreshTickets, refreshMessages } = useChat();
+  const { selectTicket, selectedTicketId, refreshTickets, refreshMessages, resetUnread } = useChat();
 
   useEffect(() => {
     document.body.classList.add("hide-ticket-floating-chat");
@@ -23,8 +23,14 @@ export function TicketChatPage() {
     if (!selectedTicketId) {
       devLog("Resync desde URL:", id);
       selectTicket(id);
+      resetUnread(id);
     }
-  }, [id, selectedTicketId, selectTicket]);
+  }, [id, resetUnread, selectedTicketId, selectTicket]);
+
+  useEffect(() => {
+    if (!id || !id.trim()) return;
+    resetUnread(id);
+  }, [id, resetUnread]);
 
   useEffect(() => {
     const handleReconnect = async () => {

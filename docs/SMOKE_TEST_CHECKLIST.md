@@ -1,58 +1,62 @@
-﻿# SMOKE TEST CHECKLIST
+# Smoke Test Checklist
 
-Duracion estimada: 15 minutos.
-Objetivo: validar flujo critico end-to-end sin romper seguridad, chat ni uploads.
+## Objetivo
+
+Validar el flujo critico end-to-end del sistema sin alterar seguridad, sockets, uploads ni contratos HTTP.
 
 ## Precondiciones
-- Backend y frontend corriendo en entorno de prueba.
+
+- Backend ejecutandose.
+- Frontend ejecutandose.
 - Base de datos accesible.
-- Existe al menos 1 usuario cliente y 1 usuario tecnico.
+- Al menos un usuario cliente y un usuario tecnico disponibles.
 
-## Flujo
-1. Login cliente
-- Iniciar sesion con cuenta de cliente.
-- Verificar acceso al dashboard cliente.
+## Flujo de validacion
 
-2. Crear ticket
-- Crear ticket nuevo con titulo y descripcion.
-- Verificar que queda en estado `pending`.
+### 1. Acceso inicial
 
-3. Login tecnico
-- Cerrar sesion cliente e iniciar con tecnico.
-- Verificar acceso al dashboard tecnico.
+- Iniciar sesion como cliente.
+- Verificar acceso a `/client/dashboard`.
 
-4. Tomar ticket
-- Tecnico toma ticket pendiente.
-- Verificar cambio a `assigned` y que aparece como asignado al tecnico actual.
+### 2. Creacion de ticket
 
-5. Enviar mensajes en chat
-- Cliente envia mensaje en ticket asignado.
-- Tecnico responde.
-- Verificar recepcion en tiempo real en ambos lados.
+- Crear un ticket con titulo, descripcion y categoria.
+- Confirmar que el ticket queda en `pending`.
 
-6. Subir imagen valida
-- Adjuntar imagen `.png`, `.jpg` o `.webp` menor a 5MB.
-- Verificar que el mensaje/adjunto se guarda y se visualiza.
+### 3. Toma del ticket
 
-7. Validar rechazo de upload invalido
-- Intentar subir archivo no permitido (ejemplo: `.exe` o doble extension).
-- Verificar error controlado (400/413 segun caso).
+- Iniciar sesion como tecnico.
+- Tomar un ticket pendiente.
+- Confirmar cambio a `assigned`.
 
-8. Cambiar estado a in_progress
-- Tecnico asignado cambia estado a `in_progress`.
-- Verificar que el estado se refleja en cliente y tecnico.
+### 4. Chat en tiempo real
 
-9. Resolver ticket
-- Tecnico cambia estado a `resolved`.
-- Verificar cierre de flujo sin errores.
+- Abrir el chat del ticket desde cliente y tecnico.
+- Enviar mensajes desde ambos lados.
+- Verificar emision y recepcion en tiempo real.
 
-## Validaciones de seguridad rapidas
-- Cliente no puede ver ticket de otro cliente (403).
-- Tecnico no asignado no puede escribir en chat ni cambiar estado (403).
-- Sin token o token invalido en endpoints protegidos retorna 401.
+### 5. Archivos
+
+- Adjuntar una imagen valida menor a 5 MB.
+- Confirmar almacenamiento y visualizacion.
+- Probar un archivo invalido para confirmar rechazo controlado.
+
+### 6. Progreso y resolucion
+
+- Cambiar el estado a `in_progress`.
+- Cambiar el estado a `resolved`.
+- Confirmar que el chat deja de aceptar nuevos mensajes.
+
+## Validaciones de seguridad
+
+- Un cliente no puede consultar tickets de otro cliente.
+- Un tecnico no asignado no puede escribir en el chat de un ticket ajeno.
+- Un tecnico no asignado no puede cambiar estado de un ticket ajeno.
+- Un request sin token debe fallar con `401` en endpoints protegidos.
 
 ## Resultado esperado
-- Flujo cliente-tecnico completo funciona.
-- Reglas de acceso se cumplen.
-- Uploads validos pasan y uploads maliciosos fallan.
-- No hay errores criticos en consola ni en logs del servidor.
+
+- El flujo cliente-tecnico se completa sin errores funcionales.
+- Los estados del ticket se reflejan de forma consistente.
+- Los uploads validos pasan y los invalidos se rechazan.
+- Las reglas de ownership y autenticacion se cumplen.

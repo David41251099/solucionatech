@@ -31,6 +31,33 @@ export function TicketList() {
     fetchTickets();
   }, [fetchTickets]);
 
+  useEffect(() => {
+    const handleRefresh = async () => {
+      devLog("Recarga de tickets por evento socket");
+      await fetchTickets();
+    };
+
+    // Escuchar eventos para mantener la lista actualizada en tiempo real
+    socket.on("connect", handleRefresh);
+    socket.on("ticketCreated", handleRefresh);
+    socket.on("ticketAssigned", handleRefresh);
+    socket.on("ticketResolved", handleRefresh);
+    socket.on("ticketCancelled", handleRefresh);
+    socket.on("ticket:new", handleRefresh);
+    socket.on("ticket:assigned", handleRefresh);
+    socket.on("ticket:statusUpdated", handleRefresh);
+
+    return () => {
+      socket.off("connect", handleRefresh);
+      socket.off("ticketCreated", handleRefresh);
+      socket.off("ticketAssigned", handleRefresh);
+      socket.off("ticketResolved", handleRefresh);
+      socket.off("ticketCancelled", handleRefresh);
+      socket.off("ticket:new", handleRefresh);
+      socket.off("ticket:assigned", handleRefresh);
+      socket.off("ticket:statusUpdated", handleRefresh);
+    };
+  }, [fetchTickets]);
 
   const viewerRole = useMemo<"client" | "technician" | undefined>(() => {
     if (user?.role === "client" || user?.role === "technician") {

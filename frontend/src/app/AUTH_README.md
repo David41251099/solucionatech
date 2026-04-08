@@ -1,163 +1,65 @@
-# Sistema de Autenticación - SolucionaTech
+# Modulo de Autenticacion del Frontend
 
-## Arquitectura Implementada
+## Alcance
 
-El sistema de autenticación está completamente implementado usando React Context API y JWT (preparado para backend real).
+El modulo de autenticacion administra la sesion de usuario en el frontend, restaura credenciales persistidas, consulta el perfil actual y conecta o desconecta Socket.IO segun el estado de autenticacion.
 
-### Estructura de Archivos
+## Componentes involucrados
 
-```
-src/app/
-├── services/
-│   └── auth.service.ts       # Servicio de autenticación (llamadas al backend)
-├── context/
-│   └── AuthContext.tsx       # Context global de autenticación
-├── hooks/
-│   └── useAuth.ts           # Hook personalizado para usar autenticación
-└── components/
-    └── ProtectedRoute.tsx   # Componente para proteger rutas
-```
+- `src/context/AuthContext.tsx`
+- `src/hooks/useAuth.ts`
+- `src/components/auth/ProtectedRoute.tsx`
+- `src/services/auth.service.ts`
+- `src/utils/api.ts`
 
-## Características
+## Responsabilidades
 
-### 1. Servicio de Autenticación (`auth.service.ts`)
+### AuthContext
 
-- ✅ Funciones `login()` y `register()` (actualmente con mock data)
-- ✅ Almacenamiento de token JWT en `localStorage`
-- ✅ Almacenamiento de datos de usuario en `localStorage`
-- ✅ Función `logout()` para cerrar sesión
-- ✅ Funciones helper para manejar `localStorage`
+- Mantener `user`, `token`, `isLoading` e `isAuthenticated`.
+- Restaurar sesion al iniciar la aplicacion.
+- Ejecutar `login`, `register` y `logout`.
+- Activar o cerrar la conexion Socket.IO junto con la sesion.
 
-**Próximo paso**: Reemplazar las funciones mock con llamadas reales al backend.
+### auth.service
 
-### 2. Context de Autenticación (`AuthContext.tsx`)
+- Ejecutar login y registro contra el backend.
+- Consultar `GET /api/auth/me`.
+- Persistir token y usuario en `localStorage`.
+- Mantener compatibilidad con la clave legacy `token`.
 
-Provee el estado global de autenticación:
+### ProtectedRoute
 
-```typescript
-interface AuthContextType {
-  user: User | null;              // Usuario autenticado
-  token: string | null;           // Token JWT
-  isLoading: boolean;             // Estado de carga
-  login: (credentials) => Promise<void>;
-  register: (data) => Promise<void>;
-  logout: () => void;
-}
-```
+- Restringir acceso por autenticacion.
+- Restringir acceso por rol cuando aplica.
+- Evitar que clientes y tecnicos ingresen a vistas que no les corresponden.
 
-### 3. Hook `useAuth`
+## Persistencia local
 
-Hook personalizado para acceder al contexto de autenticación en cualquier componente:
+Claves usadas:
 
-```typescript
-const { user, token, login, register, logout, isLoading } = useAuth();
-```
+- `solucionatech_token`
+- `solucionatech_user`
+- `token` como compatibilidad legacy
 
-### 4. Rutas Protegidas
+## Flujo resumido
 
-El componente `ProtectedRoute` protege rutas que requieren autenticación:
+1. El usuario inicia sesion o se registra.
+2. El frontend guarda token y usuario.
+3. `AuthContext` actualiza el estado global.
+4. La aplicacion conecta Socket.IO con el token actual.
+5. Ante un `401`, el cliente limpia la sesion y redirige a `/login`.
 
-```tsx
-<ProtectedRoute allowedRoles={['client']}>
-  <ClientDashboard />
-</ProtectedRoute>
-```
+## Roles soportados
 
-**Características**:
-- Muestra loading mientras verifica autenticación
-- Redirige a `/login` si no hay usuario autenticado
-- Valida roles permitidos (opcional)
-- Redirige al dashboard correcto según el rol si no tiene permiso
+- `client`
+- `technician`
 
-## Roles
+## Rutas protegidas relevantes
 
-El sistema maneja dos roles:
-
-- `client` - Cliente (puede crear tickets y ver solo los suyos)
-- `technician` - Técnico (puede ver todos los tickets, asignarlos y cambiar estados)
-
-## Rutas Protegidas
-
-Las siguientes rutas están protegidas:
-
-| Ruta | Roles Permitidos |
-|------|-----------------|
-| `/client/dashboard` | `client` |
-| `/technician/dashboard` | `technician` |
-| `/tickets` | Ambos |
-| `/tickets/:id` | Ambos |
-| `/client/create-ticket` | `client` |
-
-## Uso en Componentes
-
-### Acceder a datos del usuario
-
-```tsx
-import { useAuth } from '../hooks/useAuth';
-
-function MiComponente() {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) return <div>Cargando...</div>;
-  if (!user) return <div>No autenticado</div>;
-
-  return <div>Hola, {user.name}!</div>;
-}
-```
-
-### Cerrar sesión
-
-```tsx
-const { logout } = useAuth();
-
-const handleLogout = () => {
-  logout();
-  navigate('/');
-};
-```
-
-### Iniciar sesión
-
-```tsx
-const { login } = useAuth();
-
-const handleLogin = async (credentials) => {
-  try {
-    await login(credentials);
-    navigate('/client/dashboard');
-  } catch (error) {
-    console.error('Error al iniciar sesión:', error);
-  }
-};
-```
-
-## Persistencia de Sesión
-
-- El token y los datos del usuario se guardan en `localStorage`
-- La sesión persiste entre recargas de página
-- Al recargar, el `AuthContext` restaura automáticamente la sesión desde `localStorage`
-
-## Acceso Rápido (Demo)
-
-Las páginas de Login y Register incluyen botones de acceso rápido para testing:
-
-- **Como Cliente**: Crea sesión con rol `client`
-- **Como Técnico**: Crea sesión con rol `technician`
-
-## Próximos Pasos
-
-1. ✅ Sistema de autenticación frontend completo
-2. ⏳ Conectar con backend real (reemplazar mock data)
-3. ⏳ Implementar refresh token
-4. ⏳ Manejo de expiración de token
-5. ⏳ Integrar sistema de tickets con autenticación
-
-## Notas de Seguridad
-
-⚠️ **Importante**: 
-- Actualmente usa datos mock para desarrollo
-- El token se guarda en `localStorage` (considerar alternativas más seguras en producción)
-- No hay validación real del token todavía
-- Las contraseñas no se validan con el backend
-
-Una vez que el backend esté listo, actualizar `auth.service.ts` para hacer llamadas HTTP reales.
+- `/client/dashboard`
+- `/technician/dashboard`
+- `/tickets`
+- `/tickets/:id`
+- `/tickets/:id/chat`
+- `/client/create-ticket`

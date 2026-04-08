@@ -1,10 +1,22 @@
 ﻿import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TicketListSidebar } from '../TicketListSidebar';
+import { useChat } from '../../../context/ChatContext';
+
+vi.mock('../../../context/ChatContext', () => ({
+  useChat: vi.fn(),
+}));
 
 const onSelect = vi.fn();
 
 describe('TicketListSidebar states', () => {
+  beforeEach(() => {
+    vi.mocked(useChat).mockReturnValue({
+      unreadCounts: {},
+      totalUnread: 0,
+    } as ReturnType<typeof useChat>);
+  });
+
   it('shows loading state', () => {
     render(
       <TicketListSidebar

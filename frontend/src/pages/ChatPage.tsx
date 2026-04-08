@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Header } from "../components/Header";
-import { TicketListSidebar, type ChatTicketSummary } from "../components/chat/TicketListSidebar";
+import { ChatSidebar } from "../components/chat/ChatSidebar";
+import type { ChatTicketSummary } from "../components/chat/TicketListSidebar";
 import { ChatWindow } from "../components/chat/ChatWindow";
 import { useAuth } from "@/hooks/useAuth";
+import { useChat } from "../context/ChatContext";
 import { getMyTickets, getTicketMessages, getTicketsByStatus } from "../services/ticket.service";
 import { socket } from "../socket/socket";
 import type { Ticket, TicketMessage } from "../types";
@@ -13,6 +15,7 @@ const technicianStatuses: Ticket["status"][] = ["assigned", "in_progress"];
 
 export function ChatPage() {
   const { user } = useAuth();
+  const { resetUnread, selectTicket, incrementUnread } = useChat();
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<ChatTicketSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,6 +78,11 @@ export function ChatPage() {
             : item
         );
       });
+
+      // Incrementar badge si el mensaje es para un ticket que no está activo
+      if (message.ticket_id !== selectedTicketId && message.sender_id !== user?.id) {
+        incrementUnread(message.ticket_id, message.sender_id);
+      }
     };
 
     const handleTicketRefresh = () => {
@@ -122,26 +130,37 @@ export function ChatPage() {
     setSearchParams({ ticket: items[0].ticket.id }, { replace: true });
   }, [isLoading, items, selectedTicketId, setSearchParams]);
 
+  useEffect(() => {
+    if (!selectedTicketId) return;
+    selectTicket(selectedTicketId);
+    resetUnread(selectedTicketId);
+  }, [resetUnread, selectTicket, selectedTicketId]);
+
   const handleSelect = (ticketId: string) => {
+    selectTicket(ticketId);
+    resetUnread(ticketId);
     setSearchParams({ ticket: ticketId });
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex h-screen flex-col bg-[#f9fafb]">
       <Header showLogout />
 
-      <main className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="grid min-h-0 flex-1 grid-cols-1 bg-slate-100 md:grid-cols-[340px_minmax(0,1fr)]">
-          <TicketListSidebar
+      <main className="flex min-h-0 flex-1 overflow-hidden px-2 pb-2 pt-2 sm:px-4 sm:pb-4">
+        <div className="flex min-h-0 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <ChatSidebar
             items={items}
             selectedTicketId={selectedTicketId}
             isLoading={isLoading}
             error={error}
             onSelect={handleSelect}
           />
-          <ChatWindow ticket={selectedItem?.ticket} currentUserId={user?.id} />
+          <div className="min-h-0 flex-1">
+            <ChatWindow ticket={selectedItem?.ticket} currentUserId={user?.id} />
+          </div>
         </div>
       </main>
     </div>
   );
 }
+

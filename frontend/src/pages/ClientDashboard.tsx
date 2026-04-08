@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ClipboardList, History, Plus } from "lucide-react";
+import { CheckCircle2, ClipboardList, Clock3, History, LoaderCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Header } from "../components/Header";
 import { Button } from "../components/ui/button";
-import { DashboardTabs } from "../components/dashboard/DashboardTabs";
 import { TicketList } from "../components/dashboard/TicketList";
 import { HistoryList } from "../components/dashboard/HistoryList";
+import { DashboardTabs } from "../components/dashboard/DashboardTabs";
+import { StatCard } from "../components/dashboard/StatCard";
+import { SectionContainer } from "../components/dashboard/SectionContainer";
 import { getTicketsByStatus } from "../services/ticket.service";
 import { socket } from "../socket/socket";
 import { useAuth } from "../hooks/useAuth";
@@ -74,7 +76,7 @@ export function ClientDashboard() {
 
   useEffect(() => {
     const handleReconnect = async () => {
-      devLog("Dashboard re-fetch tras reconexión");
+      devLog("Dashboard re-fetch tras reconexion");
       setHistoryOffset(0);
       setError(null);
       const results = await Promise.allSettled([
@@ -111,7 +113,7 @@ export function ClientDashboard() {
       const { ticket, actorId } = getPayload(payload);
       if (!ticket || ticket.client_id !== currentUserId) return;
       if (actorId && actorId === currentUserId) return;
-      toast.success("Un técnico aceptó tu solicitud.");
+      toast.success("Un tecnico acepto tu solicitud.");
     };
 
     const handleResolved = (payload?: Ticket | { ticket: Ticket; actorId?: string }) => {
@@ -153,6 +155,15 @@ export function ClientDashboard() {
     };
   }, [currentUserId, loadActiveTickets, resetHistory]);
 
+  const pendingCount = useMemo(
+    () => activeTickets.filter((ticket) => ticket.status === "pending").length,
+    [activeTickets]
+  );
+  const activeCount = activeTickets.length;
+  const resolvedCount = useMemo(
+    () => historyTickets.filter((ticket) => ticket.status === "resolved").length,
+    [historyTickets]
+  );
   const tabs = useMemo(
     () => [
       { id: "requests", label: "Solicitudes", icon: <ClipboardList className="h-5 w-5" /> },
@@ -172,62 +183,80 @@ export function ClientDashboard() {
       <Header showLogout />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Dashboard del Cliente</h1>
-            <p className="mt-1 text-sm text-slate-500">Gestiona tus solicitudes activas y tu historial personal.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard</h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Gestiona tus tickets activos y revisa el historial de soporte en un solo lugar.
+            </p>
           </div>
           <Button asChild className="flex items-center gap-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
             <Link to="/client/create-ticket">
               <Plus className="h-4 w-4" />
-              Crear Ticket
+              Crear ticket
             </Link>
           </Button>
         </div>
 
+        <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Tickets activos" value={activeCount} icon={<LoaderCircle className="h-4 w-4" />} tone="blue" />
+          <StatCard label="Tickets pendientes" value={pendingCount} icon={<Clock3 className="h-4 w-4" />} tone="amber" />
+          <StatCard label="Tickets resueltos" value={resolvedCount} icon={<CheckCircle2 className="h-4 w-4" />} tone="green" />
+          <StatCard label="Historial total" value={historyTickets.length} icon={<Clock3 className="h-4 w-4" />} tone="neutral" />
+        </section>
+
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <DashboardTabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as "requests" | "history")} />
-          <div className="text-sm text-slate-500">
-            {activeTab === "requests" ? `${activeTickets.length} activas` : `${historyTickets.length} finalizadas`}
-          </div>
+          <p className="text-sm text-slate-500">
+            {activeTab === "requests" ? `${activeCount} activas` : `${historyTickets.length} en historial`}
+          </p>
         </div>
 
         {activeTab === "requests" ? (
-          <TicketList
-            tickets={activeTickets}
-            isLoading={isLoading}
-            error={error}
-            emptyTitle="No tienes solicitudes activas"
-            emptyDescription="Crea un nuevo ticket para recibir soporte"
-            showViewDetails
-            viewerRole="client"
-          />
+          <SectionContainer
+            title="Tickets activos"
+            subtitle="Solicitudes en estado pendiente, asignado o en progreso."
+          >
+            <TicketList
+              tickets={activeTickets}
+              isLoading={isLoading}
+              error={error}
+              emptyTitle="No tienes tickets activos"
+              emptyDescription="Crea un nuevo ticket para comenzar una conversacion con soporte."
+              showViewDetails
+              viewerRole="client"
+            />
+          </SectionContainer>
         ) : (
-          <HistoryList
-            tickets={historyTickets}
-            isLoading={isLoading}
-            error={error}
-            emptyTitle="Tu historial aún está vacío"
-            emptyDescription="Aquí verás tus tickets resueltos o cancelados"
-            viewerRole="client"
-            footer={
-              <div className="space-y-3">
-                {historyHasMore && (
-                  <div className="flex justify-center">
-                    <Button type="button" variant="outline" onClick={handleLoadMoreHistory} disabled={isLoadingMoreHistory}>
-                      {isLoadingMoreHistory ? "Cargando..." : "Ver más"}
-                    </Button>
-                  </div>
-                )}
-                {!historyHasMore && historyTickets.length > 0 && (
-                  <p className="text-center text-sm text-slate-500">No hay más resultados.</p>
-                )}
-              </div>
-            }
-          />
+          <SectionContainer
+            title="Historial"
+            subtitle="Tickets finalizados recientemente."
+          >
+            <HistoryList
+              tickets={historyTickets}
+              isLoading={isLoading}
+              error={error}
+              emptyTitle="Aun no has creado tickets"
+              emptyDescription="Tus tickets resueltos o cancelados apareceran aqui."
+              viewerRole="client"
+              footer={
+                <div className="space-y-3">
+                  {historyHasMore && (
+                    <div className="flex justify-center">
+                      <Button type="button" variant="outline" onClick={handleLoadMoreHistory} disabled={isLoadingMoreHistory}>
+                        {isLoadingMoreHistory ? "Cargando..." : "Ver mas"}
+                      </Button>
+                    </div>
+                  )}
+                  {!historyHasMore && historyTickets.length > 0 && (
+                    <p className="text-center text-sm text-slate-500">No hay mas resultados.</p>
+                  )}
+                </div>
+              }
+            />
+          </SectionContainer>
         )}
       </main>
     </div>
   );
 }
-

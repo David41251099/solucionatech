@@ -10,15 +10,22 @@ import { LoadingState } from "../ui/LoadingState";
 import { ErrorState } from "../ui/ErrorState";
 import { ImagePreviewModal } from "../ui/ImagePreviewModal";
 import { ScrollArea } from "../ui/scroll-area";
+import {
+  getNormalizedUnreadCounts,
+  getShortTicketId,
+  normalizeChatEntityId,
+} from "./chat-utils";
 import { devLog, devWarn } from "../../utils/devLog";
 
 interface TicketChatProps {
   mode?: "floating" | "page";
   defaultTicketId?: string | null;
 }
+const CLOSED_CHAT_STATUSES = new Set(["resolved", "cancelled"]);
 
 function TicketList() {
-  const { tickets, selectedTicketId, selectTicket, isLoadingTickets } = useChat();
+  const { tickets, selectedTicketId, selectTicket, isLoadingTickets, unreadCounts = {} } = useChat();
+  const normalizedUnreadCounts = getNormalizedUnreadCounts(unreadCounts);
 
   if (isLoadingTickets) {
     return <p className="text-sm text-muted-foreground">Cargando tickets...</p>;
@@ -32,6 +39,17 @@ function TicketList() {
     <div className="space-y-2">
       {tickets.map((ticket) => {
         const isSelected = ticket.id === selectedTicketId;
+        const ticketIdNorm = normalizeChatEntityId(ticket.id);
+        const ticketShortId = getShortTicketId(ticket.id);
+        const unreadByFullId = normalizedUnreadCounts[ticketIdNorm] ?? 0;
+        const unreadByShortId =
+          unreadByFullId > 0 || !ticketShortId
+            ? 0
+            : Object.entries(normalizedUnreadCounts).reduce((sum, [incomingId, count]) => {
+                return getShortTicketId(incomingId) === ticketShortId ? sum + count : sum;
+              }, 0);
+        const unread = unreadByFullId > 0 ? unreadByFullId : unreadByShortId;
+        const unreadLabel = unread > 99 ? "99+" : unread;
         return (
           <button
             key={ticket.id}
@@ -51,7 +69,14 @@ function TicketList() {
                 : "border-border bg-white hover:border-slate-300 hover:bg-slate-50"
             }`}
           >
-            <p className="truncate text-sm font-medium text-slate-900">{ticket.title}</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="truncate text-sm font-medium text-slate-900">{ticket.title}</p>
+              {unread > 0 && (
+                <span className="ml-2 min-w-[20px] h-[20px] px-1.5 flex items-center justify-center text-xs font-semibold text-white bg-red-500 rounded-full shrink-0">
+                  {unreadLabel}
+                </span>
+              )}
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">#{ticket.id.slice(0, 8)}</p>
           </button>
         );
@@ -83,6 +108,7 @@ function Conversation({ compact }: { compact?: boolean }) {
   );
 
   const currentMessages = selectedTicketId ? messages[selectedTicketId] ?? [] : [];
+  const isChatClosed = selectedTicket ? CLOSED_CHAT_STATUSES.has(selectedTicket.status) : false;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -110,6 +136,10 @@ function Conversation({ compact }: { compact?: boolean }) {
   }
 
   const handleSend = async (payload?: ChatSendPayload) => {
+    if (isChatClosed) {
+      return;
+    }
+
     const message = payload?.message ?? draft;
     const file = payload?.file ?? selectedFile;
     const formData = payload?.formData;
@@ -157,15 +187,21 @@ function Conversation({ compact }: { compact?: boolean }) {
       </ScrollArea>
 
       <div className="border-t border-border px-4 py-3">
-        <ChatInput
-          value={draft}
-          onChange={setDraft}
-          onSend={handleSend}
-          onFileSelect={setSelectedFile}
-          selectedFile={selectedFile}
-          isSending={isSending}
-          disabled={!user?.id}
-        />
+        {isChatClosed ? (
+          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            Este ticket ha sido finalizado. La conversación está cerrada.
+          </p>
+        ) : (
+          <ChatInput
+            value={draft}
+            onChange={setDraft}
+            onSend={handleSend}
+            onFileSelect={setSelectedFile}
+            selectedFile={selectedFile}
+            isSending={isSending}
+            disabled={!user?.id || isChatClosed}
+          />
+        )}
       </div>
 
       <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
@@ -175,7 +211,14 @@ function Conversation({ compact }: { compact?: boolean }) {
 
 export function TicketChat({ mode = "floating", defaultTicketId = null }: TicketChatProps) {
   const { isAuthenticated } = useAuth();
-  const { isOpen, setIsOpen, selectedTicketId, selectTicket } = useChat();
+  const chatContext = useChat();
+  const { isOpen, setIsOpen, selectedTicketId, selectTicket, totalUnread = 0, unreadCounts = {} } = chatContext;
+  const derivedTotalUnread = Object.values(unreadCounts).reduce(
+    (sum, count) => sum + (Number.isFinite(count) ? count : 0),
+    0
+  );
+  const totalUnreadSafe = totalUnread > 0 ? totalUnread : derivedTotalUnread;
+  const totalUnreadLabel = totalUnreadSafe > 99 ? "99+" : totalUnreadSafe;
 
   useEffect(() => {
     if (defaultTicketId) {
@@ -187,6 +230,14 @@ export function TicketChat({ mode = "floating", defaultTicketId = null }: Ticket
       selectTicket(defaultTicketId);
     }
   }, [defaultTicketId, selectTicket]);
+
+  useEffect(() => {
+    if (mode !== "page") return;
+    setIsOpen(true);
+    return () => {
+      setIsOpen(false);
+    };
+  }, [mode, setIsOpen]);
 
   if (!isAuthenticated) {
     return null;
@@ -209,15 +260,23 @@ export function TicketChat({ mode = "floating", defaultTicketId = null }: Ticket
   return (
     <>
       <div className="solucionatech-floating-chat fixed bottom-6 right-6 z-40">
-        <Button
-          type="button"
-          size="icon"
-          onClick={() => setIsOpen(!isOpen)}
-          className="h-12 w-12 rounded-full shadow-lg"
-          aria-label={isOpen ? "Cerrar chat" : "Abrir chat"}
-        >
-          {isOpen ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
-        </Button>
+        <div className="relative">
+          <Button
+            type="button"
+            size="icon"
+            onClick={() => setIsOpen(!isOpen)}
+            className="h-12 w-12 rounded-full shadow-lg"
+            aria-label={isOpen ? "Cerrar chat" : "Abrir chat"}
+          >
+            {isOpen ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
+          </Button>
+
+          {totalUnreadSafe > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[11px] font-bold text-white bg-red-500 rounded-full shadow-md">
+              {totalUnreadLabel}
+            </span>
+          )}
+        </div>
       </div>
 
       <div

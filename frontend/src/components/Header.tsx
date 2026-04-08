@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+﻿import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "./Logo";
 import { Button } from "./ui/button";
 import { LogOut, User } from "lucide-react";
@@ -23,7 +23,7 @@ export function Header({ showAuth = false, showLogout = false }: HeaderProps) {
 
   const handleLogout = () => {
     logout();
-    toast.success("Sesión cerrada correctamente");
+    toast.success("Sesion cerrada correctamente");
     navigate("/");
   };
 
@@ -33,9 +33,13 @@ export function Header({ showAuth = false, showLogout = false }: HeaderProps) {
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link to={homePath}>
+          <a
+            href={homePath}
+            className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            aria-label="Ir al dashboard"
+          >
             <Logo />
-          </Link>
+          </a>
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
@@ -51,7 +55,7 @@ export function Header({ showAuth = false, showLogout = false }: HeaderProps) {
             {showAuth && !user && (
               <>
                 <Button variant="outline" asChild>
-                  <Link to="/login">Iniciar sesión</Link>
+                  <Link to="/login">Iniciar sesion</Link>
                 </Button>
                 <Button className="bg-blue-600 text-white hover:bg-blue-700" asChild>
                   <Link to="/register">Registrarse</Link>
@@ -65,12 +69,12 @@ export function Header({ showAuth = false, showLogout = false }: HeaderProps) {
                   <User className="h-4 w-4" />
                   <span>{user.name}</span>
                   <span className="rounded-md bg-blue-50 px-2 py-1 text-xs text-blue-700">
-                    {user.role === "client" ? "Cliente" : "Técnico"}
+                    {user.role === "client" ? "Cliente" : "Tecnico"}
                   </span>
                 </div>
                 <Button variant="ghost" onClick={handleLogout} className="flex items-center gap-2">
                   <LogOut className="h-4 w-4" />
-                  Cerrar sesión
+                  Cerrar sesion
                 </Button>
               </div>
             )}

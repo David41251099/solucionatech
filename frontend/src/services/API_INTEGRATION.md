@@ -1,52 +1,48 @@
-﻿# Documentacion de Integracion Frontend-Backend
+# Servicios e Integracion API
 
-## Resumen
-SolucionaTech consume una API REST con formato estandar:
+## Proposito
 
-```json
-{
-  "success": true,
-  "data": {},
-  "message": "Operacion exitosa"
-}
-```
+Este documento resume el papel de los servicios del frontend en la integracion con el backend.
 
-En errores:
+## Servicios principales
 
-```json
-{
-  "success": false,
-  "message": "Error descriptivo",
-  "error": "Error descriptivo"
-}
-```
+### `auth.service.ts`
 
-## Variables de entorno
-```env
-VITE_API_URL=http://localhost:5000/api
-```
+- `login`
+- `register`
+- `fetchCurrentUser`
+- `logout`
 
-## Auth
-- `POST /auth/login`
-- `POST /auth/register`
-- `GET /auth/me`
+### `ticket.service.ts`
 
-`auth.service.ts` usa solo `/auth/me` para perfil actual.
+- `createTicket`
+- `getTickets`
+- `getMyTickets`
+- `getTicketById`
+- `assignTicket`
+- `updateTicketStatus`
+- `getTicketMessages`
+- `sendTicketMessage`
+- `createTicketWithAttachments`
+- `sendMessageWithAttachment`
+- `cancelTicket`
+- `releaseTicket`
 
-## Tickets
-- Crear ticket con `title`, `description`, `category` y adjunto opcional.
-- `category`: `general | hardware | software | network`.
-- Mensajes y adjuntos por ticket en `/tickets/:id/messages`.
+## Cliente HTTP base
 
-## Socket.IO seguro
-- El token JWT se envia en el handshake (`auth.token`).
-- El backend valida acceso al ticket en `ticket:join` y `message:send`.
-- No se confia en `senderId` enviado por cliente.
+`src/utils/api.ts` encapsula:
 
-## Cliente HTTP (`api.ts`)
-- Adjunta `Authorization: Bearer <token>` cuando aplica.
-- Normaliza errores y lanza `ApiError` con `statusCode` y `message`.
-- Redirige a login cuando recibe `401`.
+- URL base del backend
+- adjuncion automatica del token
+- manejo centralizado de errores
+- redireccion a login ante `401`
 
-## Nota de compatibilidad
-Aunque el backend ya entrega `data`, algunos endpoints tambien retornan campos legacy (`ticket`, `tickets`, `user`, `token`) para no romper el frontend existente.
+## Convenciones de datos
+
+- El frontend prioriza `response.data`.
+- Si el backend expone campos legacy, los servicios preservan compatibilidad temporal.
+- Los identificadores deben manejarse como `string`.
+
+## Integracion con sockets
+
+El servicio `src/services/socket.ts` reutiliza el token actual para autenticar la conexion y publica una instancia unica del cliente Socket.IO.

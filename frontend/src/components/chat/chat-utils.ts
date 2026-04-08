@@ -13,6 +13,27 @@ const joinUrl = (base: string, path: string) => {
   return `${normalizedBase}${normalizedPath}`;
 };
 
+export const normalizeChatEntityId = (value: unknown) =>
+  value === null || value === undefined ? "" : String(value).trim();
+
+export const getShortTicketId = (value: unknown) => {
+  const normalizedId = normalizeChatEntityId(value);
+  return normalizedId ? normalizedId.slice(0, 8) : "";
+};
+
+export const getNormalizedUnreadCounts = (unreadCounts: Record<string, number> = {}) =>
+  Object.entries(unreadCounts).reduce<Record<string, number>>((acc, [key, value]) => {
+    const normalizedKey = normalizeChatEntityId(key);
+    const numericValue = Number(value);
+
+    if (!normalizedKey || !Number.isFinite(numericValue) || numericValue <= 0) {
+      return acc;
+    }
+
+    acc[normalizedKey] = numericValue;
+    return acc;
+  }, {});
+
 export const getChatFileUrl = (fileUrl?: string | null) => {
   if (!fileUrl) return null;
 
@@ -53,4 +74,3 @@ export const getMessagePreview = (message?: TicketMessage | null) => {
 
   return "Sin contenido";
 };
-

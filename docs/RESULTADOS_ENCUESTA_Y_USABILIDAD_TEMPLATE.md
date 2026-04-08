@@ -1,34 +1,42 @@
-# Resultados de Encuesta y Usabilidad - Plantilla
+# Plantilla de Resultados de Validacion
 
-## A. Encuesta (Google Forms)
-Fecha:
-Cantidad de participantes:
+## Informacion general
 
-### Resultados clave
-- % usuarios que encontró una guía útil:
-- Promedio de claridad percibida (1-5):
-- % usuarios que pudo escalar a ticket sin ayuda:
+- Fecha:
+- Version evaluada:
+- Cantidad de participantes:
+- Perfil de participantes:
 
-## B. Prueba de usabilidad (3 tareas)
-### Tareas evaluadas
-1. Encontrar guía relevante
-2. Seguir pasos de guía
-3. Escalar a ticket
+## Resultados de encuesta
 
-### Métricas
-- Tiempo promedio por tarea:
-- Tasa de éxito por tarea:
-- Errores frecuentes:
-- Satisfacción general:
+- Claridad del flujo:
+- Facilidad para crear tickets:
+- Facilidad para usar el chat:
+- Comprension del estado del ticket:
+- Satisfaccion general:
 
-## C. Hallazgos y mejoras aplicadas
+## Resultados de tareas
+
+| Tarea | Tiempo promedio | Tasa de exito | Observaciones |
+|---|---|---|---|
+| Consultar guias |  |  |  |
+| Crear ticket |  |  |  |
+| Asignar ticket |  |  |  |
+| Usar chat |  |  |  |
+| Resolver ticket |  |  |  |
+
+## Hallazgos principales
+
 1.
 2.
 3.
 
-## D. Conclusión de validación
-Indicar si se cumple:
-- Usabilidad aceptable
-- Comprensión de las guías
-- Flujo de escalamiento claro
+## Riesgos o problemas detectados
 
+1.
+2.
+3.
+
+## Conclusion
+
+Indicar si el sistema cumple los criterios de aceptacion definidos en `docs/METODOLOGIA_VALIDACION.md`.

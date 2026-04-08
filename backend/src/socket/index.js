@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { query } from '../config/database.js';
 import { logger } from '../config/logger.js';
 import { canUserInteractWithTicket } from '../middleware/ticketAccess.js';
+import { CLOSED_CHAT_STATUSES } from '../utils/ticketChat.js';
 
 let io;
 const SOCKET_EVENTS = {
@@ -372,6 +373,29 @@ export const initSocket = (server) => {
         }
 
         const ticket = ticketResult.rows[0];
+        if (CLOSED_CHAT_STATUSES.has(ticket.status)) {
+          const closedMessage = 'El ticket está cerrado y no permite nuevos mensajes';
+          logger.warn(
+            {
+              action: 'chat_blocked_ticket_closed',
+              event: SOCKET_EVENTS.MESSAGE_SEND,
+              socketId: socket.id,
+              requestId,
+              userId,
+              ticketId,
+              status: ticket.status,
+            },
+            'Intento de envio bloqueado por ticket cerrado'
+          );
+
+          socket.emit(SOCKET_EVENTS.SOCKET_ERROR, {
+            event: SOCKET_EVENTS.MESSAGE_SEND,
+            message: closedMessage,
+          });
+          ackError(ack, closedMessage);
+          return;
+        }
+
         const allowed = canUserInteractWithTicket(userId, ticket);
         if (!allowed) {
           logger.warn(

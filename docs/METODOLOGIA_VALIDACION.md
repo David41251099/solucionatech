@@ -1,34 +1,65 @@
-# SolucionaTech - Instrumento de Validación
+# Metodologia de Validacion
 
-## 1) Encuesta (Google Forms)
-Población objetivo: 10 a 20 usuarios no especializados.
+## Objetivo
+
+Definir un procedimiento de validacion funcional y de usabilidad coherente con el sistema actual de SolucionaTech.
+
+## Poblacion objetivo
+
+- Usuarios clientes con experiencia tecnica limitada.
+- Usuarios tecnicos o evaluadores con perfil operativo.
+
+## Escenario de evaluacion
+
+El escenario validado debe cubrir:
+
+- consulta de guias
+- creacion de ticket
+- toma del ticket por un tecnico
+- intercambio de mensajes
+- cierre del ticket
+
+## Instrumentos
+
+### Encuesta breve
 
 Preguntas sugeridas:
-1. ¿Pudiste encontrar una guía útil para tu problema?
-2. ¿La guía fue clara y fácil de seguir? (1 a 5)
-3. Si la guía no funcionó, ¿te resultó fácil escalar a soporte por ticket?
 
-## 2) Prueba de usabilidad (3 tareas)
-Tareas:
-1. Encontrar una guía relevante usando búsqueda/filtros.
-2. Seguir los pasos de la guía.
-3. Escalar a soporte con el botón "No funcionó -> Solicitar ayuda".
+1. El flujo para solicitar soporte fue claro.
+2. La navegacion entre guias, tickets y chat fue comprensible.
+3. La respuesta del sistema fue consistente durante el uso.
+4. El proceso de carga de imagenes fue claro.
+5. La experiencia general fue satisfactoria.
 
-Métricas mínimas:
-- Tiempo por tarea.
-- Tasa de éxito por tarea.
-- Errores observados por tarea.
-- Satisfacción percibida (1 a 5).
+Escala sugerida: 1 a 5.
 
-## 3) Plantilla de registro de sesión
-| Usuario | Tarea 1 (tiempo/éxito) | Tarea 2 (tiempo/éxito) | Tarea 3 (tiempo/éxito) | Errores | Satisfacción |
-|---|---|---|---|---|---|
-| U1 | | | | | |
-| U2 | | | | | |
-| U3 | | | | | |
+### Observacion de tareas
 
-## 4) Criterio de aceptación de validación
-- >= 80% de usuarios logra completar las 3 tareas.
-- Promedio de satisfacción >= 4/5.
-- Errores críticos identificados y corregidos.
+Tareas minimas:
 
+1. Localizar una guia relacionada con una falla.
+2. Crear un ticket desde la interfaz.
+3. Como tecnico, asignarse el ticket.
+4. Intercambiar mensajes en el chat.
+5. Resolver el ticket.
+
+## Metricas
+
+- tiempo por tarea
+- tasa de exito
+- cantidad de errores observados
+- claridad percibida
+- satisfaccion general
+
+## Criterios de aceptacion
+
+- al menos 80 por ciento de exito en tareas principales
+- promedio de satisfaccion igual o superior a 4 sobre 5
+- ausencia de errores bloqueantes en autenticacion, tickets, chat y uploads
+
+## Evidencia esperada
+
+- registros por participante
+- resultados consolidados de encuesta
+- observaciones de errores o dudas recurrentes
+- recomendaciones de mejora derivadas de la validacion

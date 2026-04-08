@@ -91,6 +91,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = (): void => {
     disconnectSocket();
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem('chat_unread');
+      }
+    } catch {
+      // noop: logout no debe fallar por localStorage
+    }
     authService.logout();
     setUser(null);
     setToken(null);

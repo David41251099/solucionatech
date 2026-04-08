@@ -18,6 +18,7 @@ import AppError from '../utils/AppError.js';
 import { getIO } from '../socket/index.js';
 import { sendSuccess } from '../utils/httpResponses.js';
 import { canUserInteractWithTicket } from '../middleware/ticketAccess.js';
+import { CLOSED_CHAT_STATUSES } from '../utils/ticketChat.js';
 
 const parsePagination = (req) => {
   const limitRaw = Number(req.query.limit);
@@ -87,7 +88,6 @@ const logSecurityEvent = (req, action, extra = {}) => {
 };
 
 const STATUSES_REQUIRING_TECHNICIAN = new Set(['assigned', 'in_progress']);
-
 const assertTicketStatusIntegrity = ({ status, technician_id }) => {
   if (status === 'pending' && technician_id) {
     throw new AppError('Integridad de ticket inválida: pending no puede tener técnico asignado', 409);
@@ -1088,6 +1088,18 @@ export const createTicketMessage = async (req, res, next) => {
 
     if (!ticket) {
       return next(new AppError('Ticket no encontrado', 404));
+    }
+
+    if (CLOSED_CHAT_STATUSES.has(ticket.status)) {
+      logger.warn(
+        {
+          ...logContext,
+          action: 'chat_blocked_ticket_closed',
+          status: ticket.status,
+        },
+        'Intento de mensaje bloqueado por ticket cerrado'
+      );
+      return next(new AppError('El ticket está cerrado y no permite nuevos mensajes', 403));
     }
 
     if (!canUserInteractWithTicket(sender_id, ticket)) {
