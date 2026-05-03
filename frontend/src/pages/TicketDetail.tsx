@@ -210,6 +210,10 @@ export function TicketDetail() {
   const attachmentUrls = attachmentPaths
     .map((path) => getFileUrl(path))
     .filter((url): url is string => Boolean(url));
+  const canShowContactInfo =
+    (ticket.status === "assigned" || ticket.status === "in_progress") && !!ticket.contactInfo;
+  const contactTitle =
+    user?.role === "client" ? "Informacion de contacto del tecnico" : "Informacion de contacto del cliente";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -280,6 +284,38 @@ export function TicketDetail() {
 
             <div className="space-y-6">
               <TicketInfoCard ticket={ticket} />
+
+              {canShowContactInfo && (
+                <Card className="rounded-xl border border-slate-200 bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-base font-semibold text-slate-900">
+                      {contactTitle}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm text-slate-700">
+                    {user?.role === "client" && ticket.contactInfo?.technicianPhone && (
+                      <p>
+                        <span className="font-medium text-slate-900">Telefono:</span>{" "}
+                        {ticket.contactInfo.technicianPhone}
+                      </p>
+                    )}
+
+                    {user?.role === "client" && ticket.contactInfo?.technicianAddress && (
+                      <p>
+                        <span className="font-medium text-slate-900">Direccion:</span>{" "}
+                        {ticket.contactInfo.technicianAddress}
+                      </p>
+                    )}
+
+                    {user?.role === "technician" && ticket.contactInfo?.clientPhone && (
+                      <p>
+                        <span className="font-medium text-slate-900">Telefono:</span>{" "}
+                        {ticket.contactInfo.clientPhone}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>

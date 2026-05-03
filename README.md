@@ -238,3 +238,8 @@ El sistema se encuentra en una fase avanzada de desarrollo, con capacidades oper
 - `frontend/INTEGRATION_README.md`
 - `frontend/MIGRATION_GUIDE.md`
 - `docs/SMOKE_TEST_CHECKLIST.md`
+
+
+
+
+Mejorar el registro del técnico, como va a ser a nivel ciudad el técnico tiene que tener local o punto físico, teléfono.

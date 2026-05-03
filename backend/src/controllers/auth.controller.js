@@ -24,6 +24,27 @@ const isValidEmail = (email) => {
   return emailRegex.test(email);
 };
 
+const normalizeOptionalText = (value) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+};
+
+const validatePhone = (phone) => {
+  if (phone === null) {
+    return null;
+  }
+
+  if (phone.length < 7 || phone.length > 20) {
+    throw new AppError('El teléfono debe tener entre 7 y 20 caracteres', 400);
+  }
+
+  return phone;
+};
+
 const getRequestLogContext = (req) => ({
   requestId: req.context?.requestId ?? req.requestId ?? `http-${crypto.randomUUID()}`,
   userId: req.context?.userId ?? req.user?.userId ?? req.user?.id ?? null,
@@ -35,7 +56,7 @@ const getRequestLogContext = (req) => ({
 export const register = async (req, res, next) => {
   try {
     const logContext = getRequestLogContext(req);
-    const { email, password, name, role } = req.body;
+    const { email, password, name, role, phone, address } = req.body;
 
     if (!email || !password || !name || !role) {
       return next(
@@ -59,6 +80,12 @@ export const register = async (req, res, next) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const normalizedPhone = validatePhone(normalizeOptionalText(phone));
+    const normalizedAddress = normalizeOptionalText(address);
+
+    if (role === 'technician' && !normalizedAddress) {
+      return next(new AppError('La dirección es obligatoria para técnicos', 400));
+    }
 
     const emailCheck = await query('SELECT id FROM users WHERE email = $1', [
       normalizedEmail,
@@ -73,10 +100,10 @@ export const register = async (req, res, next) => {
     let result;
     try {
       result = await query(
-        `INSERT INTO users (name, email, password, role)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, name, email, role, created_at`,
-        [name.trim(), normalizedEmail, hashedPassword, role]
+        `INSERT INTO users (name, email, password, role, phone, address)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, name, email, role, phone, address, created_at`,
+        [name.trim(), normalizedEmail, hashedPassword, role, normalizedPhone, normalizedAddress]
       );
     } catch (dbError) {
       if (dbError.code === '23505') {
@@ -97,6 +124,8 @@ export const register = async (req, res, next) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      phone: user.phone ?? null,
+      address: user.address ?? null,
       createdAt: user.created_at,
     };
 
@@ -197,7 +226,7 @@ export const getProfile = async (req, res, next) => {
     const userId = req.user.userId;
 
     const result = await query(
-      'SELECT id, name, email, role, created_at FROM users WHERE id = $1',
+      'SELECT id, name, email, role, phone, address, created_at FROM users WHERE id = $1',
       [userId]
     );
 
@@ -211,6 +240,8 @@ export const getProfile = async (req, res, next) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      phone: user.phone ?? null,
+      address: user.address ?? null,
       createdAt: user.created_at,
     };
 

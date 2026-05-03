@@ -101,9 +101,6 @@ export function LandingPage() {
               <Button asChild>
                 <Link to="/register">Registrarse gratis</Link>
               </Button>
-              <Button variant="ghost" asChild className="border border-primary/30 text-primary">
-                <Link to="/backend-docs">Documentación Backend</Link>
-              </Button>
             </div>
           </div>
         </section>

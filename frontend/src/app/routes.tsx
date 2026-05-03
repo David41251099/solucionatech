@@ -9,7 +9,6 @@ import { TicketList } from "../pages/TicketList";
 import { TicketDetail } from "../pages/TicketDetail";
 import { TicketChatPage } from "../pages/TicketChatPage";
 import { CreateTicket } from "../pages/CreateTicket";
-import { BackendDocs } from "../pages/BackendDocs";
 import { ProtectedRoute } from "../components/auth/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -88,6 +87,10 @@ export const router = createBrowserRouter([
   },
   {
     path: "/backend-docs",
-    element: <BackendDocs />,
+    element: <Navigate to="/" replace />,
+  },
+  {
+    path: "*",
+    element: <Navigate to="/" replace />,
   },
 ]);

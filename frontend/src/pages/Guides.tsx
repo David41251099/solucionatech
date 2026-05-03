@@ -57,10 +57,10 @@ export function Guides() {
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <section className="mb-8 rounded-xl border border-slate-200 bg-white p-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Auto-diagnóstico SolucionaTech</p>
-          <h1 className="mt-2 text-2xl font-bold text-slate-900">Guías técnicas para resolver problemas comunes</h1>
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Auto-diagnostico SolucionaTech</p>
+          <h1 className="mt-2 text-2xl font-bold text-slate-900">Guias tecnicas para resolver problemas comunes</h1>
           <p className="mt-3 max-w-3xl text-sm text-slate-500">
-            Flujo oficial: auto-diagnóstico con guías en lenguaje claro, y si no funciona, escalamiento a ticket para atención con técnico por chat.
+            Flujo oficial: auto-diagnostico con guias en lenguaje claro y, si no funciona, escalamiento a ticket para atencion con tecnico por chat.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Button asChild>
@@ -78,8 +78,8 @@ export function Guides() {
           <aside className="space-y-4">
             <Card className="rounded-xl border border-slate-200 bg-white">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-900">Filtrar guías</CardTitle>
-                <CardDescription className="text-sm text-slate-500">Busca por problema, palabra clave o categoría.</CardDescription>
+                <CardTitle className="text-lg font-semibold text-slate-900">Filtrar guias</CardTitle>
+                <CardDescription className="text-sm text-slate-500">Busca por problema, palabra clave o categoria.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="relative">
@@ -117,7 +117,7 @@ export function Guides() {
               </CardHeader>
               <CardContent>
                 {filteredGuides.length === 0 ? (
-                  <EmptyState icon={<IconBook2 className="h-5 w-5" />} title="No se encontraron guías" description="Prueba con otra categoría o palabra clave." />
+                  <EmptyState icon={<IconBook2 className="h-5 w-5" />} title="No se encontraron guias" description="Prueba con otra categoria o palabra clave." />
                 ) : (
                   <div className="max-h-[400px] space-y-3 overflow-y-auto pr-2">
                     {filteredGuides.map((guide) => (
@@ -185,18 +185,18 @@ export function Guides() {
                   </div>
 
                   <div className="mt-8 rounded-xl border border-blue-200 bg-blue-50 p-4">
-                    <p className="text-sm font-medium text-slate-900">La guía no resolvió tu problema?</p>
-                    <p className="mt-1 text-sm text-slate-500">Escala a soporte: crea un ticket y un técnico te acompañará por chat.</p>
+                    <p className="text-sm font-medium text-slate-900">La guia no resolvio tu problema?</p>
+                    <p className="mt-1 text-sm text-slate-500">Escala a soporte: crea un ticket y un tecnico te acompanara por chat.</p>
                     <div className="mt-4">
                       <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate(getEscalationTarget(selectedGuide.id, user?.role))}>
-                        No funcionó {"->"} Solicitar ayuda
+                        No funciono {"->"} Solicitar ayuda
                       </Button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             ) : (
-              <EmptyState icon={<IconBook2 className="h-5 w-5" />} title="Selecciona una guía" description="Elige una guía de la lista para ver el detalle." />
+              <EmptyState icon={<IconBook2 className="h-5 w-5" />} title="Selecciona una guia" description="Elige una guia de la lista para ver el detalle." />
             )}
           </section>
         </section>

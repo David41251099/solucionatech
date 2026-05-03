@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, X } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useChat } from "../../context/ChatContext";
+import { getTicketById } from "../../services/ticket.service";
 import { ChatInput, type ChatSendPayload } from "../ChatInput";
 import { ChatMessage } from "../ChatMessage";
 import { Button } from "../ui/button";
@@ -10,6 +11,7 @@ import { LoadingState } from "../ui/LoadingState";
 import { ErrorState } from "../ui/ErrorState";
 import { ImagePreviewModal } from "../ui/ImagePreviewModal";
 import { ScrollArea } from "../ui/scroll-area";
+import type { Ticket } from "../../types";
 import {
   getNormalizedUnreadCounts,
   getShortTicketId,
@@ -100,6 +102,7 @@ function Conversation({ compact }: { compact?: boolean }) {
   const [draft, setDraft] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [selectedTicketDetail, setSelectedTicketDetail] = useState<Ticket | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   const selectedTicket = useMemo(
@@ -109,10 +112,42 @@ function Conversation({ compact }: { compact?: boolean }) {
 
   const currentMessages = selectedTicketId ? messages[selectedTicketId] ?? [] : [];
   const isChatClosed = selectedTicket ? CLOSED_CHAT_STATUSES.has(selectedTicket.status) : false;
+  const contactTicket = selectedTicketDetail ?? selectedTicket;
+  const canShowContactInfo =
+    !!contactTicket &&
+    (contactTicket.status === "assigned" || contactTicket.status === "in_progress") &&
+    !!contactTicket.contactInfo;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [currentMessages.length]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!selectedTicketId) {
+      setSelectedTicketDetail(null);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    getTicketById(selectedTicketId)
+      .then((ticketDetail) => {
+        if (isMounted) {
+          setSelectedTicketDetail(ticketDetail);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setSelectedTicketDetail(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedTicketId, selectedTicket?.status, selectedTicket?.technician_id]);
 
   if (!selectedTicketId) {
     return (
@@ -155,6 +190,20 @@ function Conversation({ compact }: { compact?: boolean }) {
         <div>
           <p className="truncate text-sm font-semibold text-slate-900">{selectedTicket.title}</p>
           <p className="text-xs text-muted-foreground">#{selectedTicket.id}</p>
+          {canShowContactInfo && (
+            <div className="mt-2 space-y-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+              <p className="font-semibold text-slate-900">Informacion de contacto</p>
+              {user?.role === "client" && contactTicket?.contactInfo?.technicianPhone && (
+                <p>Telefono: {contactTicket.contactInfo.technicianPhone}</p>
+              )}
+              {user?.role === "client" && contactTicket?.contactInfo?.technicianAddress && (
+                <p>Direccion: {contactTicket.contactInfo.technicianAddress}</p>
+              )}
+              {user?.role === "technician" && contactTicket?.contactInfo?.clientPhone && (
+                <p>Telefono: {contactTicket.contactInfo.clientPhone}</p>
+              )}
+            </div>
+          )}
         </div>
         {!compact && (
           <Button

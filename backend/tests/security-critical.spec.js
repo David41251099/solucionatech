@@ -32,6 +32,9 @@ const buildTicket = (overrides = {}) => ({
   status: 'assigned',
   client_id: 'client-1',
   technician_id: 'tech-1',
+  client_phone: '3001234567',
+  technician_phone: '3109876543',
+  technician_address: 'Calle 10 #20-30',
   ...overrides,
 });
 
@@ -88,6 +91,38 @@ beforeEach(() => {
 
 describe('Security critical audit coverage', () => {
   describe('AUTH', () => {
+    it('returns 400 when technician registers without address', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Tech Without Address',
+          email: 'tech-no-address@test.com',
+          password: '123456',
+          role: 'technician',
+          phone: '3001234567',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('La dirección es obligatoria para técnicos');
+    });
+
+    it('returns 400 when register phone length is invalid', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Bad Phone',
+          email: 'bad-phone@test.com',
+          password: '123456',
+          role: 'client',
+          phone: '123',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('El teléfono debe tener entre 7 y 20 caracteres');
+    });
+
     it('returns 401 when login user does not exist', async () => {
       query.mockResolvedValueOnce({ rows: [] });
 
@@ -141,6 +176,59 @@ describe('Security critical audit coverage', () => {
   });
 
   describe('Tickets and chat access control', () => {
+    it('does not include contactInfo when ticket is pending', async () => {
+      const token = buildToken('client-1', 'client');
+      query.mockResolvedValueOnce({
+        rows: [buildTicket({ status: 'pending', technician_id: null })],
+      });
+
+      const response = await request(app)
+        .get(`/api/tickets/${TICKET_ID}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.ticket.contactInfo).toBeUndefined();
+    });
+
+    it('includes technician phone and address for client on assigned ticket', async () => {
+      const token = buildToken('client-1', 'client');
+      query.mockResolvedValueOnce({
+        rows: [buildTicket({ status: 'assigned' })],
+      });
+
+      const response = await request(app)
+        .get(`/api/tickets/${TICKET_ID}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.ticket.contactInfo).toEqual({
+        clientPhone: null,
+        technicianPhone: '3109876543',
+        technicianAddress: 'Calle 10 #20-30',
+      });
+    });
+
+    it('includes client phone for assigned technician on in_progress ticket', async () => {
+      const token = buildToken('tech-1', 'technician');
+      query.mockResolvedValueOnce({
+        rows: [buildTicket({ status: 'in_progress' })],
+      });
+
+      const response = await request(app)
+        .get(`/api/tickets/${TICKET_ID}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.ticket.contactInfo).toEqual({
+        clientPhone: '3001234567',
+        technicianPhone: null,
+        technicianAddress: null,
+      });
+    });
+
     it('returns 403 when client tries to view another client ticket', async () => {
       const token = buildToken('client-1', 'client');
       query.mockResolvedValueOnce({

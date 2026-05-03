@@ -19,6 +19,7 @@ import { getIO } from '../socket/index.js';
 import { sendSuccess } from '../utils/httpResponses.js';
 import { canUserInteractWithTicket } from '../middleware/ticketAccess.js';
 import { CLOSED_CHAT_STATUSES } from '../utils/ticketChat.js';
+import { canViewContactInfo } from '../utils/contactInfo.js';
 
 const parsePagination = (req) => {
   const limitRaw = Number(req.query.limit);
@@ -558,11 +559,14 @@ export const getTicketById = async (req, res, next) => {
         t.created_at,
         t.updated_at,
           t.attachment_url,
-          t.attachment_url as file_url,
+        t.attachment_url as file_url,
         c.name as client_name,
         c.email as client_email,
+        c.phone as client_phone,
         tech.name as technician_name,
-        tech.email as technician_email
+        tech.email as technician_email,
+        tech.phone as technician_phone,
+        tech.address as technician_address
       FROM tickets t
       INNER JOIN users c ON t.client_id = c.id
       LEFT JOIN users tech ON t.technician_id = tech.id
@@ -600,9 +604,27 @@ export const getTicketById = async (req, res, next) => {
       'Detalle de ticket consultado'
     );
 
+    const {
+      client_phone,
+      technician_phone,
+      technician_address,
+      ...safeTicket
+    } = ticket;
+
+    const ticketResponse = canViewContactInfo(req.user, ticket)
+      ? {
+          ...safeTicket,
+          contactInfo: {
+            clientPhone: req.user.role === 'technician' ? client_phone ?? null : null,
+            technicianPhone: req.user.role === 'client' ? technician_phone ?? null : null,
+            technicianAddress: req.user.role === 'client' ? technician_address ?? null : null,
+          },
+        }
+      : safeTicket;
+
     return sendSuccess(res, {
-      data: { ticket },
-      legacy: { ticket },
+      data: { ticket: ticketResponse },
+      legacy: { ticket: ticketResponse },
     });
   } catch (error) {
     logControllerError(req, 'get_ticket_by_id', error);

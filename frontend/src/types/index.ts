@@ -12,7 +12,10 @@ export interface User {
     name: string;
     email: string;
     role: 'client' | 'technician';
+    phone?: string | null;
+    address?: string | null;
     created_at?: string;
+    createdAt?: string;
 }
 
 export interface LoginCredentials {
@@ -25,6 +28,14 @@ export interface RegisterData {
     email: string;
     password: string;
     role: 'client' | 'technician';
+    phone?: string | null;
+    address?: string | null;
+}
+
+export interface TicketContactInfo {
+    clientPhone?: string | null;
+    technicianPhone?: string | null;
+    technicianAddress?: string | null;
 }
 
 export interface LoginResponse {
@@ -65,6 +76,7 @@ export interface Ticket {
     attachmentUrl?: string | null;
     file_urls?: string[] | null;
     attachments?: string[] | null;
+    contactInfo?: TicketContactInfo;
 }
 
 export interface CreateTicketDTO {

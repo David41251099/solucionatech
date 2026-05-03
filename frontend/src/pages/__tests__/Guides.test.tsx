@@ -71,7 +71,7 @@ describe("Guides page", () => {
       target: { value: "wifi" },
     });
 
-    expect(screen.getByText("Sin conexión WiFi")).toBeInTheDocument();
+    expect(screen.getByText("Sin conexion WiFi")).toBeInTheDocument();
     expect(screen.queryByText("PC no enciende")).not.toBeInTheDocument();
   });
 
