@@ -32,6 +32,7 @@ export function ChatInput({
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const trimmedValue = value.trim();
 
   const fileKind = useMemo(() => {
     if (!selectedFile) return "none";
@@ -54,28 +55,41 @@ export function ChatInput({
     };
   }, [selectedFile]);
 
-  const buildPayload = useCallback((): ChatSendPayload => {
+  const canSend = trimmedValue.length > 0 || !!selectedFile;
+
+  const buildPayload = useCallback((): ChatSendPayload | null => {
+    if (!trimmedValue && !selectedFile) {
+      return null;
+    }
+
     const data = new FormData();
-    if (value.trim()) data.append("message", value.trim());
+    if (trimmedValue) data.append("message", trimmedValue);
     if (selectedFile) data.append("file", selectedFile);
 
     return {
-      message: value,
+      message: trimmedValue,
       file: selectedFile || null,
       formData: data,
     };
-  }, [selectedFile, value]);
+  }, [selectedFile, trimmedValue]);
+
+  const handleSend = useCallback(() => {
+    const payload = buildPayload();
+    if (!payload || disabled || isSending) {
+      return;
+    }
+
+    onSend(payload);
+  }, [buildPayload, disabled, isSending, onSend]);
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
-        if (!disabled) {
-          onSend(buildPayload());
-        }
+        handleSend();
       }
     },
-    [buildPayload, disabled, onSend]
+    [handleSend]
   );
 
   const handleClearFile = useCallback(() => {
@@ -148,8 +162,8 @@ export function ChatInput({
         />
 
         <Button
-          onClick={() => onSend(buildPayload())}
-          disabled={disabled || isSending}
+          onClick={handleSend}
+          disabled={disabled || isSending || !canSend}
           size="icon"
           className="h-10 w-10 rounded-full bg-blue-600 text-white hover:bg-blue-700"
           aria-label="Enviar mensaje"

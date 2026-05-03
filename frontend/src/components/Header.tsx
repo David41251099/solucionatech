@@ -33,13 +33,13 @@ export function Header({ showAuth = false, showLogout = false }: HeaderProps) {
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link
-            to={homePath}
+          <a
+            href={homePath}
             className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
             aria-label="Ir al dashboard"
           >
             <Logo />
-          </Link>
+          </a>
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">

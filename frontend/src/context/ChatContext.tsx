@@ -72,6 +72,16 @@ const toShortId = (value: unknown) => {
   const normalized = normalizeId(value);
   return normalized ? normalized.slice(0, 8) : null;
 };
+const formDataHasContent = (formData?: FormData) => {
+  if (!formData) return false;
+
+  const messageValue = formData.get("message");
+  if (typeof messageValue === "string" && messageValue.trim()) {
+    return true;
+  }
+
+  return formData.get("file") instanceof File;
+};
 const getInitialUnread = () => {
   try {
     if (typeof window === "undefined" || !window.localStorage) {
@@ -338,7 +348,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (!ticketId || !user?.id) return;
 
       const trimmed = message?.trim() ?? "";
-      if (!trimmed && !file && !formData) return;
+      const hasAttachedFile = !!file || formData?.get("file") instanceof File;
+      if (!trimmed && !hasAttachedFile && !formDataHasContent(formData)) return;
 
       try {
         setIsSending(true);
