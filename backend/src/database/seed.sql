@@ -11,57 +11,62 @@ TRUNCATE TABLE users CASCADE;
 -- ============================================
 -- USUARIOS DE PRUEBA
 -- ============================================
-INSERT INTO users (id, name, email, password, role, phone, address, created_at) VALUES
+INSERT INTO users (id, name, email, password, role, phone, address, city, created_at) VALUES
   (
     '550e8400-e29b-41d4-a716-446655440001',
     'Juan Perez',
     'juan@cliente.com',
-    '$2b$10$K7L/gZbdKVWqFx3mJ5fBxuKZmWZQxVnQ0XJXqmZZQXJXqmZZQXJXq',
+    '$2b$10$YsinKazS7QIt47.Cp1u75OTbGvOII9O7EfMeh31rOwYfQkQpJ.AWq',
     'client',
     '3001234567',
     NULL,
+    'Bucaramanga',
     NOW() - INTERVAL '30 days'
   ),
   (
     '550e8400-e29b-41d4-a716-446655440002',
     'Maria Gonzalez',
     'maria@cliente.com',
-    '$2b$10$K7L/gZbdKVWqFx3mJ5fBxuKZmWZQxVnQ0XJXqmZZQXJXqmZZQXJXq',
+    '$2b$10$YsinKazS7QIt47.Cp1u75OTbGvOII9O7EfMeh31rOwYfQkQpJ.AWq',
     'client',
     '3012345678',
     NULL,
+    'Floridablanca',
     NOW() - INTERVAL '25 days'
   ),
   (
     '550e8400-e29b-41d4-a716-446655440003',
     'Carlos Ramirez',
     'carlos@cliente.com',
-    '$2b$10$K7L/gZbdKVWqFx3mJ5fBxuKZmWZQxVnQ0XJXqmZZQXJXqmZZQXJXq',
+    '$2b$10$YsinKazS7QIt47.Cp1u75OTbGvOII9O7EfMeh31rOwYfQkQpJ.AWq',
     'client',
     '3023456789',
     NULL,
+    'Piedecuesta',
     NOW() - INTERVAL '20 days'
   );
 
-INSERT INTO users (id, name, email, password, role, phone, address, created_at) VALUES
+INSERT INTO users (id, name, email, password, role, phone, address, city, created_at) VALUES
   (
     '550e8400-e29b-41d4-a716-446655440010',
     'Ana Martinez',
     'ana@tecnico.com',
-    '$2b$10$K7L/gZbdKVWqFx3mJ5fBxuKZmWZQxVnQ0XJXqmZZQXJXqmZZQXJXq',
+    '$2b$10$YsinKazS7QIt47.Cp1u75OTbGvOII9O7EfMeh31rOwYfQkQpJ.AWq',
     'technician',
     '3104567890',
-    'Calle 123 #45-67, Bogota',
+    'Calle 123 #45-67, Bucaramanga',
+    'Bucaramanga',
     NOW() - INTERVAL '60 days'
   ),
   (
     '550e8400-e29b-41d4-a716-446655440011',
     'Luis Torres',
     'luis@tecnico.com',
-    '$2b$10$K7L/gZbdKVWqFx3mJ5fBxuKZmWZQxVnQ0XJXqmZZQXJXqmZZQXJXq',
+    '$2b$10$YsinKazS7QIt47.Cp1u75OTbGvOII9O7EfMeh31rOwYfQkQpJ.AWq',
     'technician',
     '3115678901',
-    'Carrera 45 #12-34, Medellin',
+    'Carrera 45 #12-34, Girón',
+    'Girón',
     NOW() - INTERVAL '55 days'
   );
 
@@ -69,7 +74,7 @@ INSERT INTO users (id, name, email, password, role, phone, address, created_at) 
 -- TICKETS DE PRUEBA
 -- ============================================
 
-INSERT INTO tickets (id, title, description, status, category, client_id, technician_id, created_at, updated_at) VALUES
+INSERT INTO tickets (id, title, description, status, category, client_id, technician_id, city, created_at, updated_at) VALUES
   (
     '660e8400-e29b-41d4-a716-446655440001',
     'No puedo acceder a mi cuenta',
@@ -78,6 +83,7 @@ INSERT INTO tickets (id, title, description, status, category, client_id, techni
     'software',
     '550e8400-e29b-41d4-a716-446655440001',
     NULL,
+    'Bucaramanga',
     NOW() - INTERVAL '2 hours',
     NOW() - INTERVAL '2 hours'
   ),
@@ -89,11 +95,12 @@ INSERT INTO tickets (id, title, description, status, category, client_id, techni
     'software',
     '550e8400-e29b-41d4-a716-446655440002',
     NULL,
+    'Floridablanca',
     NOW() - INTERVAL '5 hours',
     NOW() - INTERVAL '5 hours'
   );
 
-INSERT INTO tickets (id, title, description, status, category, client_id, technician_id, created_at, updated_at) VALUES
+INSERT INTO tickets (id, title, description, status, category, client_id, technician_id, city, created_at, updated_at) VALUES
   (
     '660e8400-e29b-41d4-a716-446655440003',
     'Lentitud en el sistema',
@@ -102,11 +109,12 @@ INSERT INTO tickets (id, title, description, status, category, client_id, techni
     'software',
     '550e8400-e29b-41d4-a716-446655440001',
     '550e8400-e29b-41d4-a716-446655440010',
+    'Bucaramanga',
     NOW() - INTERVAL '1 day',
     NOW() - INTERVAL '6 hours'
   );
 
-INSERT INTO tickets (id, title, description, status, category, client_id, technician_id, created_at, updated_at) VALUES
+INSERT INTO tickets (id, title, description, status, category, client_id, technician_id, city, created_at, updated_at) VALUES
   (
     '660e8400-e29b-41d4-a716-446655440004',
     'Bug en el formulario de contacto',
@@ -115,6 +123,7 @@ INSERT INTO tickets (id, title, description, status, category, client_id, techni
     'software',
     '550e8400-e29b-41d4-a716-446655440003',
     '550e8400-e29b-41d4-a716-446655440011',
+    'Piedecuesta',
     NOW() - INTERVAL '3 days',
     NOW() - INTERVAL '1 hour'
   ),
@@ -126,11 +135,12 @@ INSERT INTO tickets (id, title, description, status, category, client_id, techni
     'general',
     '550e8400-e29b-41d4-a716-446655440002',
     '550e8400-e29b-41d4-a716-446655440010',
+    'Floridablanca',
     NOW() - INTERVAL '5 days',
     NOW() - INTERVAL '2 days'
   );
 
-INSERT INTO tickets (id, title, description, status, category, client_id, technician_id, created_at, updated_at) VALUES
+INSERT INTO tickets (id, title, description, status, category, client_id, technician_id, city, created_at, updated_at) VALUES
   (
     '660e8400-e29b-41d4-a716-446655440006',
     'Error 404 en pagina de perfil',
@@ -139,6 +149,7 @@ INSERT INTO tickets (id, title, description, status, category, client_id, techni
     'software',
     '550e8400-e29b-41d4-a716-446655440001',
     '550e8400-e29b-41d4-a716-446655440011',
+    'Bucaramanga',
     NOW() - INTERVAL '7 days',
     NOW() - INTERVAL '5 days'
   ),
@@ -150,6 +161,7 @@ INSERT INTO tickets (id, title, description, status, category, client_id, techni
     'hardware',
     '550e8400-e29b-41d4-a716-446655440003',
     '550e8400-e29b-41d4-a716-446655440010',
+    'Piedecuesta',
     NOW() - INTERVAL '10 days',
     NOW() - INTERVAL '8 days'
   );
