@@ -14,18 +14,43 @@ dotenv.config();
 
 const { Pool } = pg;
 
+const normalizeBooleanEnv = (value) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (['true', '1', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+
+  if (['false', '0', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+
+  return null;
+};
+
 // Validar variables de entorno requeridas
 if (!process.env.DB_PASSWORD) {
   throw new Error('DB_PASSWORD no esta definida en el .env');
 }
 
+const isProduction = process.env.NODE_ENV === 'production';
+const dbHost = process.env.DB_HOST || 'localhost';
+const dbPort = Number(process.env.DB_PORT || 5432);
+const explicitSsl = normalizeBooleanEnv(process.env.DB_SSL);
+const shouldUseSsl = explicitSsl ?? (isProduction || dbHost.includes('supabase.co'));
+
 // Configurar pool de conexiones
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
+  host: dbHost,
+  port: dbPort,
   database: process.env.DB_NAME || 'solucionatech',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD,
+  ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
