@@ -3,7 +3,6 @@ import { Logo } from "./Logo";
 import { Button } from "./ui/button";
 import { LogOut, User } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { useSocketStatus } from "../hooks/useSocketStatus";
 import { toast } from "sonner";
 
 interface HeaderProps {
@@ -27,8 +26,6 @@ export function Header({ showAuth = false, showLogout = false }: HeaderProps) {
     navigate("/");
   };
 
-  const socketOnline = useSocketStatus();
-
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -42,16 +39,6 @@ export function Header({ showAuth = false, showLogout = false }: HeaderProps) {
           </a>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${socketOnline ? "bg-emerald-500" : "bg-red-500"
-                  }`}
-              />
-              <span className="text-xs text-slate-500">
-                {socketOnline ? "Conectado" : "Desconectado"}
-              </span>
-            </div>
-
             {showAuth && !user && (
               <>
                 <Button variant="outline" asChild>
