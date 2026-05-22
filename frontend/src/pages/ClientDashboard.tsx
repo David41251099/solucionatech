@@ -14,6 +14,7 @@ import { socket } from "../socket/socket";
 import { useAuth } from "../hooks/useAuth";
 import type { Ticket } from "../types";
 import { devLog, devWarn } from "../utils/devLog";
+import { pushRealtimeDebug } from "../utils/realtimeDebug";
 
 export function ClientDashboard() {
   const { user } = useAuth();
@@ -32,6 +33,7 @@ export function ClientDashboard() {
   const loadActiveTickets = useCallback(async () => {
     try {
       setError(null);
+      pushRealtimeDebug("client-dashboard", "Refetch tickets activos");
       const data = await getTicketsByStatus(["pending", "assigned", "in_progress"], LIMIT_ACTIVE, 0);
       setActiveTickets(data);
     } catch {
@@ -45,6 +47,7 @@ export function ClientDashboard() {
         setIsLoadingMoreHistory(true);
       }
 
+      pushRealtimeDebug("client-dashboard", "Refetch historial", { offset, append });
       const data = await getTicketsByStatus(["resolved", "cancelled"], LIMIT_HISTORY, offset);
       setHistoryHasMore(data.length === LIMIT_HISTORY);
       setHistoryTickets((prev) => (append ? [...prev, ...data] : data));
@@ -109,6 +112,7 @@ export function ClientDashboard() {
     };
 
     const handleAssigned = (payload?: Ticket | { ticket: Ticket; actorId?: string }) => {
+      pushRealtimeDebug("client-dashboard:event", "ticketAssigned recibido", payload);
       reloadAll();
       const { ticket, actorId } = getPayload(payload);
       if (!ticket || ticket.client_id !== currentUserId) return;
@@ -117,6 +121,7 @@ export function ClientDashboard() {
     };
 
     const handleResolved = (payload?: Ticket | { ticket: Ticket; actorId?: string }) => {
+      pushRealtimeDebug("client-dashboard:event", "ticketResolved recibido", payload);
       reloadAll();
       const { ticket, actorId } = getPayload(payload);
       if (!ticket || ticket.client_id !== currentUserId) return;
@@ -125,6 +130,7 @@ export function ClientDashboard() {
     };
 
     const handleCancelled = (payload?: Ticket | { ticket: Ticket; actorId?: string }) => {
+      pushRealtimeDebug("client-dashboard:event", "ticketCancelled recibido", payload);
       reloadAll();
       const { ticket, actorId } = getPayload(payload);
       if (!ticket || ticket.client_id !== currentUserId) return;
@@ -132,7 +138,10 @@ export function ClientDashboard() {
       toast.success("Tu ticket fue cancelado.");
     };
 
-    const handleStatusUpdated = () => reloadAll();
+    const handleStatusUpdated = (payload?: Ticket) => {
+      pushRealtimeDebug("client-dashboard:event", "ticket:statusUpdated recibido", payload);
+      reloadAll();
+    };
 
     socket.on("ticket:statusUpdated", handleStatusUpdated);
     socket.on("ticketResolved", handleResolved);

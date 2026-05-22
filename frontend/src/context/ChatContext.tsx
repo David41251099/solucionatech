@@ -19,6 +19,7 @@ import {
 } from "../services/ticket.service";
 import type { Ticket, TicketMessage } from "../types";
 import { devLog, devWarn } from "../utils/devLog";
+import { pushRealtimeDebug } from "../utils/realtimeDebug";
 
 export type Message = TicketMessage;
 
@@ -180,6 +181,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoadingTickets(true);
       setError(null);
+      pushRealtimeDebug("chat", "Refetch tickets de chat");
       const tickets = await getTickets();
       const filtered =
         user.role === "client"
@@ -212,6 +214,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoadingMessages(true);
       setError(null);
+      pushRealtimeDebug("chat", "Refetch mensajes", { ticketId });
       const data = await getTicketMessages(ticketId);
       setState((prev) => ({
         ...prev,
@@ -289,6 +292,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           unreadCounts,
           totalUnread: nextTotalUnread,
         };
+      });
+      pushRealtimeDebug("chat:badge", "Unread incrementado", {
+        ticketId: ticketIdNorm,
+        senderId: senderIdNorm,
       });
     },
     [user]
@@ -589,6 +596,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (!rawMessage) {
         return;
       }
+      pushRealtimeDebug("chat:event", "message:new recibido", message);
       const normalizedSocketMessage = rawMessage as Message & {
         ticketId?: string | number | null;
         senderId?: string | number | null;
@@ -681,6 +689,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     };
 
     const handleTicketUpdated = () => {
+      pushRealtimeDebug("chat:event", "Evento de ticket recibido para refrescar chat");
       refreshTickets();
     };
 
