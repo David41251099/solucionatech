@@ -8,11 +8,12 @@ const SOCKET_URL =
 
 export const socket = io(SOCKET_URL, {
   path: "/socket.io",
-  transports: ["websocket"],
   autoConnect: false,
+  withCredentials: true,
   reconnection: true,
-  reconnectionAttempts: 5,
+  reconnectionAttempts: 10,
   reconnectionDelay: 2000,
+  timeout: 10000,
 });
 
 export const connectSocket = () => {
