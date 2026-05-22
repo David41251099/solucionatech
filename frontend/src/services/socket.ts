@@ -4,8 +4,18 @@ import { SOCKET_EVENTS } from "../socket/events";
 import { devError, devLog, devWarn } from "../utils/devLog";
 import { pushRealtimeDebug } from "../utils/realtimeDebug";
 
-const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL || publicApiUrl || "http://localhost:5000";
+const normalizeSocketUrl = (value?: string) => {
+  if (!value) {
+    return "http://localhost:5000";
+  }
+
+  const trimmed = value.replace(/\/+$/, "");
+  return trimmed.endsWith("/api") ? trimmed.slice(0, -4) : trimmed;
+};
+
+const SOCKET_URL = normalizeSocketUrl(
+  import.meta.env.VITE_SOCKET_URL || publicApiUrl || "http://localhost:5000"
+);
 
 export const socket = io(SOCKET_URL, {
   path: "/socket.io",
