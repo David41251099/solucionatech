@@ -85,6 +85,10 @@ class HttpClient {
             headers,
         };
 
+        if ((config.method || "GET").toUpperCase() === "GET") {
+            config.cache = "no-store";
+        }
+
         try {
             const response = await fetch(url, config);
 
