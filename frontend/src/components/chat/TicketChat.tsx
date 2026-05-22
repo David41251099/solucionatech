@@ -261,12 +261,12 @@ function Conversation({ compact }: { compact?: boolean }) {
 export function TicketChat({ mode = "floating", defaultTicketId = null }: TicketChatProps) {
   const { isAuthenticated } = useAuth();
   const chatContext = useChat();
-  const { isOpen, setIsOpen, selectedTicketId, selectTicket, totalUnread = 0, unreadCounts = {} } = chatContext;
+  const { isOpen, setIsOpen, selectedTicketId, selectTicket, unreadCounts = {}, tickets = [] } = chatContext;
   const derivedTotalUnread = Object.values(unreadCounts).reduce(
     (sum, count) => sum + (Number.isFinite(count) ? count : 0),
     0
   );
-  const totalUnreadSafe = totalUnread > 0 ? totalUnread : derivedTotalUnread;
+  const totalUnreadSafe = derivedTotalUnread;
   const totalUnreadLabel = totalUnreadSafe > 99 ? "99+" : totalUnreadSafe;
 
   useEffect(() => {
@@ -320,7 +320,7 @@ export function TicketChat({ mode = "floating", defaultTicketId = null }: Ticket
             {isOpen ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
           </Button>
 
-          {totalUnreadSafe > 0 && (
+          {tickets.length > 0 && totalUnreadSafe > 0 && (
             <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[11px] font-bold text-white bg-red-500 rounded-full shadow-md">
               {totalUnreadLabel}
             </span>

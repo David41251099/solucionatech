@@ -13,7 +13,6 @@ import { Button } from "../components/ui/button";
 import { StatCard } from "../components/dashboard/StatCard";
 import { SectionContainer } from "../components/dashboard/SectionContainer";
 import { devLog, devWarn } from "../utils/devLog";
-import { pushRealtimeDebug } from "../utils/realtimeDebug";
 
 export function TechDashboard() {
   const { user } = useAuth();
@@ -34,7 +33,6 @@ export function TechDashboard() {
 
   const loadAvailableTickets = useCallback(async () => {
     try {
-      pushRealtimeDebug("tech-dashboard", "Refetch tickets disponibles");
       const available = await getAvailableTickets(LIMIT_AVAILABLE, 0);
       setAvailableTickets(available);
       setError(null);
@@ -45,7 +43,6 @@ export function TechDashboard() {
 
   const loadMyTickets = useCallback(async () => {
     try {
-      pushRealtimeDebug("tech-dashboard", "Refetch mis tickets");
       const mine = await getMyTickets(LIMIT_MY, 0);
       setMyTickets(mine);
       setError(null);
@@ -61,7 +58,6 @@ export function TechDashboard() {
           setIsLoadingMoreHistory(true);
         }
 
-        pushRealtimeDebug("tech-dashboard", "Refetch historial", { offset, append });
         const history = await getMyTickets(LIMIT_HISTORY, offset, ["resolved", "cancelled"]);
         setHistoryHasMore(history.length === LIMIT_HISTORY);
         setHistoryTickets((prev) => (append ? [...prev, ...history] : history));
@@ -134,12 +130,10 @@ export function TechDashboard() {
     };
 
     const handleNew = (payload?: Ticket) => {
-      pushRealtimeDebug("tech-dashboard:event", "ticket:new recibido", payload);
       loadAvailableTickets();
     };
 
     const handleCreated = (payload?: Ticket | { ticket: Ticket; actorId?: string }) => {
-      pushRealtimeDebug("tech-dashboard:event", "ticketCreated recibido", payload);
       loadAvailableTickets();
       const { ticket, actorId } = getPayload(payload);
       if (!ticket) return;
@@ -149,20 +143,17 @@ export function TechDashboard() {
     };
 
     const handleAssigned = (payload?: Ticket | { ticket: Ticket; actorId?: string }) => {
-      pushRealtimeDebug("tech-dashboard:event", "ticketAssigned/ticket:assigned recibido", payload);
       loadAvailableTickets();
       loadMyTickets();
       resetHistory();
     };
 
     const handleStatusUpdated = (payload?: Ticket) => {
-      pushRealtimeDebug("tech-dashboard:event", "ticket:statusUpdated/ticketResolved recibido", payload);
       loadMyTickets();
       resetHistory();
     };
 
     const handleCancelled = (payload?: Ticket | { ticket: Ticket; actorId?: string }) => {
-      pushRealtimeDebug("tech-dashboard:event", "ticketCancelled recibido", payload);
       loadAvailableTickets();
       loadMyTickets();
       resetHistory();

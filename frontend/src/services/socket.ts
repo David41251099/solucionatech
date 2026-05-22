@@ -2,7 +2,6 @@
 import { getToken, publicApiUrl } from "../utils/api";
 import { SOCKET_EVENTS } from "../socket/events";
 import { devError, devLog, devWarn } from "../utils/devLog";
-import { pushRealtimeDebug } from "../utils/realtimeDebug";
 
 const normalizeSocketUrl = (value?: string) => {
   if (!value) {
@@ -34,11 +33,6 @@ export const connectSocket = () => {
     token: token || undefined,
   };
 
-  pushRealtimeDebug("socket", "Intentando conectar socket", {
-    socketUrl: SOCKET_URL,
-    hasToken: Boolean(token),
-  });
-
   if (!socket.connected) {
     socket.connect();
   }
@@ -56,25 +50,20 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
 
 socket.on("connect", () => {
   devLog("[SOCKET] Conectado:", socket.id);
-  pushRealtimeDebug("socket", "Socket conectado", { socketId: socket.id });
 });
 
 socket.on("disconnect", (reason) => {
   devLog("[SOCKET] Desconectado:", reason);
-  pushRealtimeDebug("socket", "Socket desconectado", { reason });
 });
 
 socket.on("connect_error", (err) => {
   devError("[SOCKET] Error conexion:", err.message);
-  pushRealtimeDebug("socket", "Error de conexion", { message: err.message });
 });
 
 socket.on(SOCKET_EVENTS.SOCKET_ERROR, (payload) => {
   devWarn("[SOCKET] Error de servidor:", payload);
-  pushRealtimeDebug("socket", "Error emitido por servidor", payload);
 });
 
 socket.onAny((event, ...args) => {
   devLog(`[SOCKET EVENT] ${event}`, args);
-  pushRealtimeDebug("socket:event", String(event), args[0]);
 });
