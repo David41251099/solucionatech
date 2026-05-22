@@ -42,15 +42,7 @@ function TicketList() {
       {tickets.map((ticket) => {
         const isSelected = ticket.id === selectedTicketId;
         const ticketIdNorm = normalizeChatEntityId(ticket.id);
-        const ticketShortId = getShortTicketId(ticket.id);
-        const unreadByFullId = normalizedUnreadCounts[ticketIdNorm] ?? 0;
-        const unreadByShortId =
-          unreadByFullId > 0 || !ticketShortId
-            ? 0
-            : Object.entries(normalizedUnreadCounts).reduce((sum, [incomingId, count]) => {
-                return getShortTicketId(incomingId) === ticketShortId ? sum + count : sum;
-              }, 0);
-        const unread = unreadByFullId > 0 ? unreadByFullId : unreadByShortId;
+        const unread = normalizedUnreadCounts[ticketIdNorm] ?? 0;
         const unreadLabel = unread > 99 ? "99+" : unread;
         return (
           <button

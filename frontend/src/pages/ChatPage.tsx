@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Header } from "../components/Header";
 import { ChatSidebar } from "../components/chat/ChatSidebar";
@@ -15,7 +15,6 @@ const technicianStatuses: Ticket["status"][] = ["assigned", "in_progress"];
 
 export function ChatPage() {
   const { user } = useAuth();
-  const { resetUnread, selectTicket, incrementUnread } = useChat();
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<ChatTicketSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +22,14 @@ export function ChatPage() {
 
   const selectedTicketId = searchParams.get("ticket");
   const selectedItem = items.find((item) => item.ticket.id === selectedTicketId) ?? null;
+
+  // Asegurar que el contexto sepa que el chat está "abierto" mientras estamos en esta página
+  const { resetUnread, selectTicket, setIsOpen } = useChat();
+
+  useEffect(() => {
+    setIsOpen(true);
+    return () => setIsOpen(false);
+  }, [setIsOpen]);
 
   useEffect(() => {
     if (!user) return;
@@ -67,22 +74,27 @@ export function ChatPage() {
 
     loadTickets();
 
-    const handleMessageNew = (message: TicketMessage) => {
+    const handleMessageNew = (message: any) => {
+      // Normalizar el ID del ticket del mensaje entrante
+      const incomingMessage = message?.data?.message || message?.message || message;
+      const ticketId = incomingMessage?.ticket_id || incomingMessage?.ticketId;
+      const senderId = incomingMessage?.sender_id || incomingMessage?.senderId || incomingMessage?.userId;
+
+      if (!ticketId) return;
+
       setItems((prev) => {
-        const exists = prev.some((item) => item.ticket.id === message.ticket_id);
+        const exists = prev.some((item) => item.ticket.id === ticketId);
         if (!exists) return prev;
 
         return prev.map((item) =>
-          item.ticket.id === message.ticket_id
-            ? { ...item, lastMessage: message }
+          item.ticket.id === ticketId
+            ? { ...item, lastMessage: incomingMessage }
             : item
         );
       });
 
-      // Incrementar badge si el mensaje es para un ticket que no está activo
-      if (message.ticket_id !== selectedTicketId && message.sender_id !== user?.id) {
-        incrementUnread(message.ticket_id, message.sender_id);
-      }
+      // NO llamar a incrementUnread aquí, ya que ChatContext lo maneja automáticamente
+      // para evitar incrementos duplicados y desincronización de IDs.
     };
 
     const handleTicketRefresh = () => {
