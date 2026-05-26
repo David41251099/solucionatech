@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Clock, User } from "lucide-react";
+import { Clock, MapPin, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { TicketStatus } from "../types";
 import { formatRelativeTime } from "../utils/date";
@@ -15,6 +15,7 @@ interface TicketCardProps {
   title: string;
   description: string;
   status: TicketStatus;
+  city?: string | null;
   category?: string | null;
   createdAt: string;
   assignedTo?: string;
@@ -29,6 +30,7 @@ export function TicketCard({
   title,
   description,
   status,
+  city,
   category,
   createdAt,
   assignedTo,
@@ -90,6 +92,12 @@ export function TicketCard({
             <StatusBadge status={status} role={viewerRole} />
             {category && (
               <Badge variant="outline">Categoría: {category}</Badge>
+            )}
+            {city && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" />
+                {city}
+              </Badge>
             )}
           </div>
 

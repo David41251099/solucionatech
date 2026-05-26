@@ -9,10 +9,13 @@ import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip";
+import { useAuth } from "../hooks/useAuth";
+import { ALLOWED_CITIES } from "../constants/cities";
 import { createTicketWithAttachments } from "../services/ticket.service";
 
 export function CreateTicket() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -24,6 +27,8 @@ export function CreateTicket() {
     description: "",
     category: "general",
   });
+  const userCity = user?.city ?? null;
+  const hasAllowedCity = !!userCity && ALLOWED_CITIES.includes(userCity);
 
   useEffect(() => {
     if (!files.length) {
@@ -59,6 +64,10 @@ export function CreateTicket() {
     try {
       setError(null);
       setIsSubmitting(true);
+      if (!hasAllowedCity) {
+        toast.error("Tu perfil no tiene una ciudad de cobertura valida.");
+        return;
+      }
       if (files.length > 5) {
         toast.error("Maximo 5 imagenes");
         return;
@@ -130,6 +139,16 @@ export function CreateTicket() {
                   <option value="software">Software</option>
                   <option value="network">Red</option>
                 </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-slate-700">Ciudad del ticket</Label>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  {hasAllowedCity ? userCity : "No disponible"}
+                </div>
+                <p className="text-sm text-slate-500">
+                  La ciudad se toma automaticamente desde tu perfil.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -234,7 +253,7 @@ export function CreateTicket() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button type="submit" className="flex-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700" disabled={isSubmitting}>
+                <Button type="submit" className="flex-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700" disabled={isSubmitting || !hasAllowedCity}>
                   {isSubmitting ? "Creando..." : "Crear Ticket"}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => navigate("/client/dashboard")} disabled={isSubmitting}>

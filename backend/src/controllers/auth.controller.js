@@ -8,6 +8,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/database.js';
 import { logger } from '../config/logger.js';
+import { normalizeCity } from '../constants/cities.js';
 import AppError from '../utils/AppError.js';
 import { sendSuccess } from '../utils/httpResponses.js';
 
@@ -56,7 +57,7 @@ const getRequestLogContext = (req) => ({
 export const register = async (req, res, next) => {
   try {
     const logContext = getRequestLogContext(req);
-    const { email, password, name, role, phone, address } = req.body;
+    const { email, password, name, role, phone, address, city } = req.body;
 
     if (!email || !password || !name || !role) {
       return next(
@@ -82,6 +83,11 @@ export const register = async (req, res, next) => {
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedPhone = validatePhone(normalizeOptionalText(phone));
     const normalizedAddress = normalizeOptionalText(address);
+    const normalizedCity = normalizeCity(city);
+
+    if (!normalizedCity) {
+      return next(new AppError('La ciudad es obligatoria y debe ser una de las permitidas', 400));
+    }
 
     if (role === 'technician' && !normalizedAddress) {
       return next(new AppError('La dirección es obligatoria para técnicos', 400));
@@ -100,10 +106,10 @@ export const register = async (req, res, next) => {
     let result;
     try {
       result = await query(
-        `INSERT INTO users (name, email, password, role, phone, address)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id, name, email, role, phone, address, created_at`,
-        [name.trim(), normalizedEmail, hashedPassword, role, normalizedPhone, normalizedAddress]
+        `INSERT INTO users (name, email, password, role, phone, address, city)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, name, email, role, phone, address, city, created_at`,
+        [name.trim(), normalizedEmail, hashedPassword, role, normalizedPhone, normalizedAddress, normalizedCity]
       );
     } catch (dbError) {
       if (dbError.code === '23505') {
@@ -126,6 +132,7 @@ export const register = async (req, res, next) => {
       role: user.role,
       phone: user.phone ?? null,
       address: user.address ?? null,
+      city: user.city,
       createdAt: user.created_at,
     };
 
@@ -169,7 +176,7 @@ export const login = async (req, res, next) => {
     }
 
     const result = await query(
-      'SELECT id, name, email, password, role, created_at FROM users WHERE email = $1',
+      'SELECT id, name, email, password, role, city, created_at FROM users WHERE email = $1',
       [email.toLowerCase().trim()]
     );
 
@@ -192,6 +199,7 @@ export const login = async (req, res, next) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      city: user.city,
       createdAt: user.created_at,
     };
 
@@ -226,7 +234,7 @@ export const getProfile = async (req, res, next) => {
     const userId = req.user.userId;
 
     const result = await query(
-      'SELECT id, name, email, role, phone, address, created_at FROM users WHERE id = $1',
+      'SELECT id, name, email, role, phone, address, city, created_at FROM users WHERE id = $1',
       [userId]
     );
 
@@ -242,6 +250,7 @@ export const getProfile = async (req, res, next) => {
       role: user.role,
       phone: user.phone ?? null,
       address: user.address ?? null,
+      city: user.city,
       createdAt: user.created_at,
     };
 

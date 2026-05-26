@@ -1,4 +1,4 @@
-import { Clock, Tag, User } from "lucide-react";
+import { Clock, MapPin, Tag, User } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Separator } from "../ui/separator";
 import type { Ticket } from "../../types";
@@ -46,6 +46,16 @@ export function TicketInfoCard({ ticket }: TicketInfoCardProps) {
             <span>Categoria</span>
           </div>
           <p className="text-sm font-medium text-slate-800">{categoryValue}</p>
+        </div>
+
+        <Separator />
+
+        <div>
+          <div className="mb-1 flex items-center gap-2 text-sm text-slate-500">
+            <MapPin className="h-4 w-4" />
+            <span>Ciudad</span>
+          </div>
+          <p className="text-sm font-medium text-slate-800">{ticket.city}</p>
         </div>
 
         <Separator />

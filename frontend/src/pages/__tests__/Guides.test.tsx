@@ -107,6 +107,7 @@ describe("Guides page", () => {
         name: "Cliente",
         email: "client@test.com",
         role: "client",
+        city: "Bucaramanga",
       },
       token: "token",
       isLoading: false,

@@ -32,6 +32,7 @@ const buildTicket = (overrides = {}) => ({
   status: 'assigned',
   client_id: 'client-1',
   technician_id: 'tech-1',
+  city: 'Bucaramanga',
   client_phone: '3001234567',
   technician_phone: '3109876543',
   technician_address: 'Calle 10 #20-30',
@@ -100,6 +101,7 @@ describe('Security critical audit coverage', () => {
           password: '123456',
           role: 'technician',
           phone: '3001234567',
+          city: 'Bucaramanga',
         });
 
       expect(response.status).toBe(400);
@@ -116,11 +118,43 @@ describe('Security critical audit coverage', () => {
           password: '123456',
           role: 'client',
           phone: '123',
+          city: 'Bucaramanga',
         });
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
       expect(response.body.message).toBe('El teléfono debe tener entre 7 y 20 caracteres');
+    });
+
+    it('returns 400 when city is missing during register', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'No City',
+          email: 'no-city@test.com',
+          password: '123456',
+          role: 'client',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('La ciudad es obligatoria y debe ser una de las permitidas');
+    });
+
+    it('returns 400 when city is outside allowed coverage', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Outside City',
+          email: 'outside-city@test.com',
+          password: '123456',
+          role: 'client',
+          city: 'Bogota',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('La ciudad es obligatoria y debe ser una de las permitidas');
     });
 
     it('returns 401 when login user does not exist', async () => {
@@ -143,6 +177,7 @@ describe('Security critical audit coverage', () => {
             email: 'client@test.com',
             password: 'hashed-pass',
             role: 'client',
+            city: 'Bucaramanga',
             created_at: '2026-04-04T00:00:00.000Z',
           },
         ],
@@ -173,6 +208,32 @@ describe('Security critical audit coverage', () => {
       expect(response.status).toBe(401);
       expect(response.body.success).toBe(false);
     });
+
+    it('returns city in authenticated profile', async () => {
+      const token = buildToken('client-1', 'client');
+      query.mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'client-1',
+            name: 'Client One',
+            email: 'client@test.com',
+            role: 'client',
+            phone: '3001234567',
+            address: null,
+            city: 'Bucaramanga',
+            created_at: '2026-04-04T00:00:00.000Z',
+          },
+        ],
+      });
+
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.user.city).toBe('Bucaramanga');
+    });
   });
 
   describe('Tickets and chat access control', () => {
@@ -189,6 +250,63 @@ describe('Security critical audit coverage', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.ticket.contactInfo).toBeUndefined();
+      expect(response.body.data.ticket.city).toBe('Bucaramanga');
+    });
+
+    it('creates a ticket using the client city from profile', async () => {
+      const token = buildToken('client-1', 'client');
+      query
+        .mockResolvedValueOnce({ rows: [{ city: 'Floridablanca' }] })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: TICKET_ID,
+              title: 'Nuevo ticket',
+              description: 'Descripcion',
+              status: 'pending',
+              category: 'software',
+              client_id: 'client-1',
+              technician_id: null,
+              city: 'Floridablanca',
+              attachment_url: null,
+              created_at: '2026-04-04T00:00:00.000Z',
+              updated_at: '2026-04-04T00:00:00.000Z',
+            },
+          ],
+        });
+
+      const response = await request(app)
+        .post('/api/tickets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          title: 'Nuevo ticket',
+          description: 'Descripcion',
+          category: 'software',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.ticket.city).toBe('Floridablanca');
+    });
+
+    it('returns 400 when client profile city is invalid during ticket creation', async () => {
+      const token = buildToken('client-1', 'client');
+      query.mockResolvedValueOnce({
+        rows: [{ city: 'Bogota' }],
+      });
+
+      const response = await request(app)
+        .post('/api/tickets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          title: 'Nuevo ticket',
+          description: 'Descripcion',
+          category: 'software',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Tu perfil no tiene una ciudad válida para crear tickets');
     });
 
     it('includes technician phone and address for client on assigned ticket', async () => {

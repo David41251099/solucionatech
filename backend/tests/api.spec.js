@@ -71,17 +71,22 @@ describe("POST /api/tickets", () => {
   it("creates ticket for authenticated client", async () => {
     const token = jwt.sign({ userId: "client-1", role: "client" }, process.env.JWT_SECRET);
 
-    query.mockResolvedValueOnce({
-      rows: [
-        {
-          id: "ticket-1",
-          title: "No enciende",
-          description: "Mi PC no enciende",
-          status: "pending",
-          client_id: "client-1",
-        },
-      ],
-    });
+    query
+      .mockResolvedValueOnce({
+        rows: [{ city: "Bucaramanga" }],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "ticket-1",
+            title: "No enciende",
+            description: "Mi PC no enciende",
+            status: "pending",
+            client_id: "client-1",
+            city: "Bucaramanga",
+          },
+        ],
+      });
 
     const response = await request(app)
       .post("/api/tickets")
@@ -93,6 +98,7 @@ describe("POST /api/tickets", () => {
 
     expect(response.status).toBe(201);
     expect(response.body.data.ticket.title).toBe("No enciende");
+    expect(response.body.data.ticket.city).toBe("Bucaramanga");
   });
 });
 

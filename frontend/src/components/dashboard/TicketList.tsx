@@ -64,6 +64,7 @@ export function TicketList({
             title={ticket.title}
             description={ticket.description}
             status={ticket.status}
+            city={ticket.city}
             category={ticket.category}
             createdAt={ticket.created_at}
             assignedTo={ticket.technician_name ?? undefined}

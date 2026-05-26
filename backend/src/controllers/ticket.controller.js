@@ -17,6 +17,7 @@ import { logger } from '../config/logger.js';
 import AppError from '../utils/AppError.js';
 import { getIO } from '../socket/index.js';
 import { sendSuccess } from '../utils/httpResponses.js';
+import { normalizeCity } from '../constants/cities.js';
 import { canUserInteractWithTicket } from '../middleware/ticketAccess.js';
 import { CLOSED_CHAT_STATUSES } from '../utils/ticketChat.js';
 import { canViewContactInfo } from '../utils/contactInfo.js';
@@ -229,14 +230,24 @@ export const createTicket = async (req, res, next) => {
       return next(new AppError('Categoría no válida', 400));
     }
 
+    const clientResult = await query('SELECT city FROM users WHERE id = $1', [client_id]);
+    if (clientResult.rows.length === 0) {
+      return next(new AppError('Cliente no encontrado', 404));
+    }
+
+    const resolvedCity = normalizeCity(clientResult.rows[0]?.city);
+    if (!resolvedCity) {
+      return next(new AppError('Tu perfil no tiene una ciudad válida para crear tickets', 400));
+    }
+
     // Insertar ticket en la base de datos
     const sqlQuery = `
-      INSERT INTO tickets (title, description, category, status, client_id, attachment_url)
-      VALUES ($1, $2, $3, 'pending', $4, $5)
+      INSERT INTO tickets (title, description, category, status, client_id, attachment_url, city)
+      VALUES ($1, $2, $3, 'pending', $4, $5, $6)
       RETURNING *
     `;
 
-    const result = await query(sqlQuery, [title, description, resolvedCategory, client_id, resolvedAttachment]);
+    const result = await query(sqlQuery, [title, description, resolvedCategory, client_id, resolvedAttachment, resolvedCity]);
     const ticket = {
       ...result.rows[0],
       attachments: attachmentList,
@@ -326,6 +337,7 @@ export const getTickets = async (req, res, next) => {
           t.category,
           t.client_id,
           t.technician_id,
+          t.city,
           t.created_at,
           t.updated_at,
           t.attachment_url,
@@ -363,6 +375,7 @@ export const getTickets = async (req, res, next) => {
           t.category,
           t.client_id,
           t.technician_id,
+          t.city,
           t.created_at,
           t.updated_at,
           t.attachment_url,
@@ -493,6 +506,7 @@ export const getMyTickets = async (req, res, next) => {
         t.category,
         t.client_id,
         t.technician_id,
+        t.city,
         t.created_at,
         t.updated_at,
           t.attachment_url,
@@ -556,6 +570,7 @@ export const getTicketById = async (req, res, next) => {
         t.category,
         t.client_id,
         t.technician_id,
+        t.city,
         t.created_at,
         t.updated_at,
           t.attachment_url,

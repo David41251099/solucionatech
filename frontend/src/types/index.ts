@@ -1,3 +1,5 @@
+import type { AllowedCity } from "../constants/cities";
+
 /**
  * types/index.ts
  * Tipos TypeScript para la aplicación SolucionaTech
@@ -12,6 +14,7 @@ export interface User {
     name: string;
     email: string;
     role: 'client' | 'technician';
+    city: AllowedCity;
     phone?: string | null;
     address?: string | null;
     created_at?: string;
@@ -28,6 +31,7 @@ export interface RegisterData {
     email: string;
     password: string;
     role: 'client' | 'technician';
+    city: AllowedCity;
     phone?: string | null;
     address?: string | null;
 }
@@ -60,6 +64,7 @@ export interface Ticket {
     title: string;
     description: string;
     status: TicketStatus;
+    city: AllowedCity;
     category?: TicketCategory | string | null;
     client_id: string;
     technician_id: string | null;

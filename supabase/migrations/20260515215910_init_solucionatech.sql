@@ -6,13 +6,13 @@
 -- ============================================
 -- EXTENSION UUID
 -- ============================================
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ============================================
 -- TABLA: users
 -- ============================================
 CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
@@ -55,7 +55,7 @@ ALTER TABLE users
 -- TABLA: tickets
 -- ============================================
 CREATE TABLE IF NOT EXISTS tickets (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT NOT NULL,
 
@@ -147,7 +147,7 @@ $$;
 -- TABLA: ticket_messages
 -- ============================================
 CREATE TABLE IF NOT EXISTS ticket_messages (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   ticket_id UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
   sender_id UUID REFERENCES users(id) ON DELETE SET NULL,
   message TEXT,
@@ -174,44 +174,3 @@ ALTER TABLE ticket_messages
 CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket_id ON ticket_messages(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_messages_created_at ON ticket_messages(created_at DESC);
 
--- ============================================
--- VERIFICACION COMPLETA (PARA pgAdmin)
--- ============================================
-
--- 1. Ver tablas existentes
-SELECT table_name
-FROM information_schema.tables
-WHERE table_schema = 'public'
-ORDER BY table_name;
-
--- 2. Ver columnas de cada tabla
-SELECT table_name, column_name, data_type
-FROM information_schema.columns
-WHERE table_schema = 'public'
-ORDER BY table_name, ordinal_position;
-
--- 3. Ver constraints (CHECK, FK, PK)
-SELECT conname AS constraint_name,
-       conrelid::regclass AS table_name,
-       pg_get_constraintdef(oid) AS definition
-FROM pg_constraint
-WHERE connamespace = 'public'::regnamespace;
-
--- 4. Ver valores permitidos en CHECK (status y category)
-SELECT conname, pg_get_constraintdef(oid)
-FROM pg_constraint
-WHERE conrelid = 'tickets'::regclass;
-
--- 5. Ver triggers
-SELECT tgname AS trigger_name,
-       relname AS table_name
-FROM pg_trigger
-JOIN pg_class ON pg_trigger.tgrelid = pg_class.oid
-WHERE NOT tgisinternal;
-
--- 6. Conteo de registros por tabla
-SELECT 'users' AS table_name, COUNT(*) FROM users
-UNION
-SELECT 'tickets', COUNT(*) FROM tickets
-UNION
-SELECT 'ticket_messages', COUNT(*) FROM ticket_messages;

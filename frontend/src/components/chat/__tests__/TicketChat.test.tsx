@@ -17,6 +17,7 @@ const baseUser = {
   name: 'Client One',
   email: 'client@test.com',
   role: 'client',
+  city: 'Bucaramanga',
 };
 
 const buildTicket = (status: 'assigned' | 'resolved' | 'cancelled') => ({
@@ -25,6 +26,7 @@ const buildTicket = (status: 'assigned' | 'resolved' | 'cancelled') => ({
   description: 'Descripcion',
   status,
   category: 'software',
+  city: 'Bucaramanga',
   client_id: 'client-1',
   technician_id: status === 'assigned' || status === 'resolved' ? 'tech-1' : null,
   created_at: '2026-04-04T00:00:00.000Z',

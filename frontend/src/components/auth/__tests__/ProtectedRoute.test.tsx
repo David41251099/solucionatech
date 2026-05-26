@@ -49,6 +49,7 @@ describe('ProtectedRoute', () => {
         name: 'Tech Uno',
         email: 'tech@test.com',
         role: 'technician',
+        city: 'Bucaramanga',
       },
       token: 'valid-token',
       isLoading: false,
