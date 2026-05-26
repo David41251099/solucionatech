@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { Textarea } from "../components/ui/textarea";
 import { useAuth } from "../hooks/useAuth";
+import { ALLOWED_CITIES, type AllowedCity } from "../constants/cities";
 import { toast } from "sonner";
 import { devError } from "../utils/devLog";
 
@@ -22,6 +23,7 @@ export function Register() {
     confirmPassword: "",
     phone: "",
     address: "",
+    city: "",
     role: "client" as "client" | "technician",
   });
 
@@ -44,6 +46,11 @@ export function Register() {
       return;
     }
 
+    if (!formData.city) {
+      toast.error("Debes seleccionar una ciudad");
+      return;
+    }
+
     if (formData.role === "technician" && !formData.address.trim()) {
       toast.error("La direccion es obligatoria para tecnicos");
       return;
@@ -58,6 +65,7 @@ export function Register() {
         password: formData.password,
         role: formData.role,
         phone: normalizedPhone || null,
+        city: formData.city as AllowedCity,
         address: formData.role === "technician" ? formData.address.trim() : null,
       });
 
@@ -66,8 +74,9 @@ export function Register() {
       const redirectPath =
         formData.role === "client" ? "/client/dashboard" : "/technician/dashboard";
       navigate(redirectPath);
-    } catch (error) {
-      toast.error("Error al registrarse. Intenta con otro correo.");
+    } catch (error: any) {
+      const errorMessage = error?.message || "Error al registrarse. Intenta con otro correo.";
+      toast.error(errorMessage);
       devError("Error en registro:", error);
     } finally {
       setIsLoading(false);
@@ -153,6 +162,26 @@ export function Register() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="city">Ciudad</Label>
+                <select
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  required
+                  className="w-full rounded-md border border-border bg-input-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="" disabled>
+                    Selecciona una ciudad
+                  </option>
+                  {ALLOWED_CITIES.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Tipo de cuenta</Label>
                 <RadioGroup
                   value={formData.role}
@@ -180,7 +209,7 @@ export function Register() {
                   <Label htmlFor="address">Direccion del punto fisico</Label>
                   <Textarea
                     id="address"
-                    placeholder="Calle 123 #45-67, Bogota"
+                    placeholder={`Calle 123 #45-67, ${formData.city || "Bucaramanga"}`}
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     required
